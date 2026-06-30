@@ -44,6 +44,12 @@ export function FeaturedSlider({ events }: { events: Event[] }) {
     setCurrentIndex(index);
   }, [currentIndex]);
 
+  // Reset/clamp index when the events list changes (mis. saat ganti kategori),
+  // agar currentIndex tidak menunjuk ke event yang sudah tidak ada.
+  useEffect(() => {
+    setCurrentIndex((prev) => (prev >= slideCount ? 0 : prev));
+  }, [slideCount]);
+
   // Auto-slide
   useEffect(() => {
     if (isPaused || slideCount <= 1) return;

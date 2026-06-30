@@ -22,6 +22,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'events' | 'users'>('events');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -49,22 +50,27 @@ export function Dashboard() {
   }, [profile]);
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+    setActionError('');
     try {
       await eventService.updateEvent(id, { status });
       setEvents(events.map(e => e.id === id ? { ...e, status } : e));
     } catch (err) {
       console.error(err);
+      setActionError('Gagal memperbarui status event. Silakan coba lagi.');
     }
   };
 
   const confirmDelete = async () => {
     if (eventToDelete) {
+      setActionError('');
       try {
         await eventService.deleteEvent(eventToDelete);
         setEvents(events.filter(e => e.id !== eventToDelete));
         setEventToDelete(null);
       } catch (err) {
         console.error(err);
+        setActionError('Gagal menghapus event. Silakan coba lagi.');
+        setEventToDelete(null);
       }
     }
   };
@@ -108,6 +114,12 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      {actionError && (
+        <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-medium border border-red-100">
+          {actionError}
+        </div>
+      )}
 
       {activeTab === 'events' ? (
         <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-xl shadow-blue-900/5">

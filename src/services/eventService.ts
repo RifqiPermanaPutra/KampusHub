@@ -11,11 +11,8 @@ import {
   doc, 
   getDoc, 
   getDocs, 
-  query, 
-  where, 
-  orderBy,
-  Timestamp,
-  serverTimestamp
+  query,
+  where,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/error-handler';

@@ -92,13 +92,24 @@ export function CreateEvent() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024) { // 1MB limit for firestore documents basically
-        setError('Gambar terlalu besar. Maksimal 1MB.');
+      // Gambar disimpan sebagai data URL base64 (±33% lebih besar dari file asli)
+      // langsung di dokumen Firestore yang dibatasi 1MB. Batasi file asli ke ~700KB
+      // agar hasil base64 + field lain tetap di bawah 1MB.
+      const MAX_FILE_SIZE = 700 * 1024;
+      if (file.size > MAX_FILE_SIZE) {
+        setError('Gambar terlalu besar. Maksimal ~700KB.');
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({ ...formData, posterUrl: reader.result as string });
+        const result = reader.result as string;
+        // Pengaman tambahan: pastikan data URL final tidak melebihi limit dokumen.
+        if (result.length > 1024 * 1024) {
+          setError('Gambar terlalu besar setelah dikonversi. Gunakan gambar yang lebih kecil.');
+          return;
+        }
+        setError('');
+        setFormData({ ...formData, posterUrl: result });
       };
       reader.readAsDataURL(file);
     }

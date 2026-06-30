@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Users, Send, MessageSquare, ShieldCheck, Trash2, Download, Edit } from 'lucide-react';
+import { Calendar, MapPin, Send, MessageSquare, ShieldCheck, Trash2, Download, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
@@ -16,7 +16,6 @@ import { Event, RSVP, Comment } from '../types';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
-import { cn } from '../lib/utils';
 
 export function EventDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +29,8 @@ export function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [commentError, setCommentError] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -58,12 +59,13 @@ export function EventDetail() {
     return () => {
       unsubscribeComments();
     };
-  }, [id, profile]);
+  }, [id, profile?.uid]);
 
   const handleRSVP = async () => {
     if (!profile || !event || hasRsvped) return;
     if (event.capacity && rsvps.length >= event.capacity) return; // double check
     setActionLoading(true);
+    setActionError('');
     try {
       await rsvpService.rsvpToEvent({
         eventId: event.id,
@@ -79,11 +81,12 @@ export function EventDetail() {
         await notificationService.sendNotification({
           userId: event.organizerId,
           eventId: event.id,
-          message: `${profile.name} has RSVP-ed to your event "${event.title}".`
+          message: `${profile.name} telah RSVP ke event Anda "${event.title}".`
         });
       }
     } catch (err) {
       console.error(err);
+      setActionError('Gagal melakukan RSVP. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -92,6 +95,7 @@ export function EventDetail() {
   const handleCancelRSVP = async () => {
     if (!profile || !event || !hasRsvped) return;
     setActionLoading(true);
+    setActionError('');
     try {
       await rsvpService.cancelRSVP(event.id, profile.uid);
       setHasRsvped(false);
@@ -99,6 +103,7 @@ export function EventDetail() {
       setRsvps(r);
     } catch (err) {
       console.error(err);
+      setActionError('Gagal membatalkan RSVP. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -127,6 +132,7 @@ export function EventDetail() {
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !event || !newComment.trim()) return;
+    setCommentError('');
     try {
       await commentService.addComment({
         eventId: event.id,
@@ -141,17 +147,19 @@ export function EventDetail() {
         await notificationService.sendNotification({
           userId: event.organizerId,
           eventId: event.id,
-          message: `${profile.name} commented on "${event.title}": "${newComment.substring(0, 30)}${newComment.length > 30 ? '...' : ''}"`
+          message: `${profile.name} mengomentari "${event.title}": "${newComment.substring(0, 30)}${newComment.length > 30 ? '...' : ''}"`
         });
       }
     } catch (err) {
       console.error(err);
+      setCommentError('Gagal mengirim komentar. Silakan coba lagi.');
     }
   };
 
   const handleAdminDecision = async (status: 'approved' | 'rejected') => {
     if (!profile || profile.role !== 'admin' || !event) return;
     setActionLoading(true);
+    setActionError('');
     try {
       await eventService.updateEvent(event.id, { status });
       setEvent({ ...event, status });
@@ -160,10 +168,11 @@ export function EventDetail() {
       await notificationService.sendNotification({
         userId: event.organizerId,
         eventId: event.id,
-        message: `Admin has ${status} your event "${event.title}".`
+        message: `Admin telah ${status === 'approved' ? 'menyetujui' : 'menolak'} event Anda "${event.title}".`
       });
     } catch (err) {
       console.error(err);
+      setActionError('Gagal memperbarui status event. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -172,12 +181,15 @@ export function EventDetail() {
   const handleDeleteEvent = async () => {
     if (!profile || !event) return;
     setActionLoading(true);
+    setActionError('');
     try {
       await eventService.deleteEvent(event.id);
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
+      setActionError('Gagal menghapus event. Silakan coba lagi.');
       setActionLoading(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -258,6 +270,10 @@ export function EventDetail() {
             </Button>
           </form>
 
+          {commentError && (
+            <p className="text-sm text-red-500 font-medium">{commentError}</p>
+          )}
+
           <div className="space-y-6">
             {comments.map((comment) => (
               <div key={comment.id} className="bg-white p-6 rounded-2xl border border-gray-50 shadow-sm space-y-2">
@@ -320,9 +336,15 @@ export function EventDetail() {
               : (new Date(event.date).getTime() < new Date().getTime())
                 ? 'Event Telah Berakhir'
                 : (!hasRsvped && event.capacity !== undefined && rsvps.length >= event.capacity) 
-                  ? 'Kuota Penuh' 
+                  ? 'Kuota Penuh'
                   : 'RSVP Sekarang'}
           </Button>
+
+          {actionError && (
+            <p className="text-sm text-red-500 font-medium text-center bg-red-50 py-2 px-3 rounded-xl border border-red-100">
+              {actionError}
+            </p>
+          )}
 
           {(profile?.role === 'admin' || (profile?.role === 'panitia' && profile?.uid === event.organizerId)) && event.status === 'approved' && (
             <Link to={`/event/${event.id}/scanner`}>

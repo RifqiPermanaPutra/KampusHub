@@ -5,7 +5,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
@@ -16,17 +16,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, import.meta.env.VITE_FIREBASE_DATABASE_ID);
+// ignoreUndefinedProperties: field opsional yang bernilai undefined (mis. capacity)
+// akan diabaikan, bukan melempar error saat addDoc/updateDoc.
+export const db = initializeFirestore(
+  app,
+  { ignoreUndefinedProperties: true },
+  import.meta.env.VITE_FIREBASE_DATABASE_ID
+);
 export const auth = getAuth(app);
-
-// Validate Connection to Firestore
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();

@@ -19,11 +19,13 @@ export function Profile() {
   const [name, setName] = useState(profile?.name || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   if (!profile) return null;
 
   const handleSave = async () => {
     setSaving(true);
+    setError('');
     try {
       const userRef = doc(db, 'users', profile.uid);
       await updateDoc(userRef, { name, bio });
@@ -31,6 +33,7 @@ export function Profile() {
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update profile', error);
+      setError('Gagal menyimpan profil. Silakan coba lagi.');
     } finally {
       setSaving(false);
     }
@@ -94,6 +97,9 @@ export function Profile() {
                       placeholder="Ceritakan tentang dirimu..."
                     />
                  </div>
+                 {error && (
+                   <p className="text-sm text-red-500 font-medium">{error}</p>
+                 )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -103,7 +109,13 @@ export function Profile() {
                     {profile.role}
                   </Badge>
                 </div>
-                <p className="text-lg text-gray-500 font-medium">Mahasiswa KampusHub University</p>
+                <p className="text-lg text-gray-500 font-medium">
+                  {profile.role === 'mahasiswa'
+                    ? [profile.jurusan, profile.fakultas].filter(Boolean).join(' • ') || 'Mahasiswa'
+                    : profile.role === 'panitia'
+                      ? [profile.jabatan, profile.organisasi].filter(Boolean).join(' • ') || 'Panitia Event'
+                      : 'Administrator KampusHub'}
+                </p>
                 {profile.bio && (
                   <p className="text-gray-700 mt-2 bg-gray-50 p-4 rounded-2xl italic">"{profile.bio}"</p>
                 )}
@@ -129,9 +141,9 @@ export function Profile() {
 
             <div className="space-y-4 pt-4">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Status Akun</h3>
-              <div className="flex items-center gap-3 text-green-600 bg-green-50 px-4 py-3 rounded-2xl inline-flex font-bold text-sm">
+              <div className="items-center gap-3 text-green-600 bg-green-50 px-4 py-3 rounded-2xl inline-flex font-bold text-sm capitalize">
                 <Shield size={18} />
-                Akun Mahasiswa Terverifikasi
+                Akun {profile.role} Terverifikasi
               </div>
             </div>
           </div>

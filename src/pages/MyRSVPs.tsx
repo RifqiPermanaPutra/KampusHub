@@ -15,15 +15,18 @@ export function MyRSVPs() {
   const [loading, setLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [ticketModalRsvp, setTicketModalRsvp] = useState<(RSVP & { event?: Event }) | null>(null);
+  const [error, setError] = useState('');
 
   const handleCancelRSVP = async (eventId: string) => {
     if (!profile) return;
     setCancelingId(eventId);
+    setError('');
     try {
       await rsvpService.cancelRSVP(eventId, profile.uid);
       setRsvps(prev => prev.filter(r => r.eventId !== eventId));
     } catch (err) {
       console.error(err);
+      setError('Gagal membatalkan RSVP. Silakan coba lagi.');
     } finally {
       setCancelingId(null);
     }
@@ -71,6 +74,12 @@ export function MyRSVPs() {
           <p className="text-gray-500">Event yang sudah Anda daftarkan untuk dihadiri.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-medium border border-red-100">
+          {error}
+        </div>
+      )}
 
       {rsvps.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">

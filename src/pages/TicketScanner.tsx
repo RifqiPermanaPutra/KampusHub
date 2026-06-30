@@ -93,8 +93,10 @@ export function TicketScanner() {
       await rsvpService.checkInRSVP(event.id, rsvpId);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
+      setScanResult({ status: 'success', message: 'Berhasil check-in secara manual.' });
     } catch (err) {
       console.error(err);
+      setScanResult({ status: 'error', message: 'Gagal melakukan check-in. Silakan coba lagi.' });
     }
   };
 
