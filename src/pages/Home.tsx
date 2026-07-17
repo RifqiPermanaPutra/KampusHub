@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { Sparkles } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
+import { rsvpService } from '../services/rsvpService';
+import { recommendEvents } from '../lib/recommendation';
 import { Event } from '../types';
 import { FeaturedSlider } from '../components/FeaturedEvent';
 import { AnnouncementCard } from '../components/AnnouncementCard';
@@ -9,7 +13,9 @@ import { CATEGORIES } from '../constants';
 import { cn } from '../lib/utils';
 
 export function Home() {
+  const { profile } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
+  const [recommended, setRecommended] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('Semua Event');
 
@@ -17,10 +23,14 @@ export function Home() {
     async function loadEvents() {
       const data = await eventService.getAllEvents('approved');
       setEvents(data);
+      if (profile) {
+        const myRsvps = await rsvpService.getRSVPsForUser(profile.uid);
+        setRecommended(recommendEvents(data, myRsvps, 3));
+      }
       setLoading(false);
     }
     loadEvents();
-  }, []);
+  }, [profile]);
 
   const filteredEvents = categoryFilter === 'Semua Event' 
     ? events 
@@ -65,6 +75,30 @@ export function Home() {
           <AnnouncementCard />
         </div>
       </section>
+
+      {/* Recommended Section */}
+      {recommended.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-8">
+            <Sparkles size={16} className="text-campus-blue" />
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+              Rekomendasi Untuk Anda
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {recommended.map((event, index) => (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <EventCard event={event} />
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recently Posted Section */}
       <section>

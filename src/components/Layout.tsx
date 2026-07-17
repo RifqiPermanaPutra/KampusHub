@@ -3,12 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { useAuth } from '../contexts/AuthContext';
+import { runReminderCheck } from '../lib/reminder';
 
 export function Layout() {
+  const { profile } = useAuth();
+
+  // Reminder H-1: sekali per sesi, cek event yang akan berlangsung < 24 jam
+  useEffect(() => {
+    if (profile) {
+      runReminderCheck(profile.uid);
+    }
+  }, [profile?.uid]);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg-main font-sans">
       <Sidebar />

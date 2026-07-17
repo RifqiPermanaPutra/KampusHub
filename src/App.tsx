@@ -26,6 +26,8 @@ import { Notifications } from './pages/Notifications';
 import { Dashboard } from './pages/Dashboard';
 import { MyRSVPs } from './pages/MyRSVPs';
 import { TicketScanner } from './pages/TicketScanner';
+import { EventAnalytics } from './pages/EventAnalytics';
+import { VerifyCertificate } from './pages/VerifyCertificate';
 
 export default function App() {
   return (
@@ -47,6 +49,8 @@ export default function App() {
             <Route path="/notifications" element={<Guard><Notifications /></Guard>} />
             <Route path="/dashboard" element={<Guard allowedRoles={['admin', 'panitia']}><Dashboard /></Guard>} />
             <Route path="/event/:id/scanner" element={<Guard allowedRoles={['admin', 'panitia']}><TicketScanner /></Guard>} />
+            <Route path="/event/:id/analytics" element={<Guard allowedRoles={['admin', 'panitia']}><EventAnalytics /></Guard>} />
+            <Route path="/verify/:code" element={<Guard><VerifyCertificate /></Guard>} />
             
             {/* Panitia / Admin only */}
             <Route 

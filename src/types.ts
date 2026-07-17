@@ -38,7 +38,13 @@ export interface Event {
   organizerName: string;
   createdAt: string;
   capacity?: number;
+  // Counter yang dijaga secara atomik oleh transaksi RSVP.
+  // Event lama mungkin belum punya field ini (fallback: hitung dari daftar RSVP).
+  attendeeCount?: number;
+  waitlistCount?: number;
 }
+
+export type RSVPStatus = 'registered' | 'checked-in' | 'waitlist';
 
 export interface RSVP {
   id: string;
@@ -46,7 +52,11 @@ export interface RSVP {
   userName: string;
   eventId: string;
   createdAt: string;
-  status?: 'registered' | 'checked-in';
+  status?: RSVPStatus;
+  checkedInAt?: string;
+  // Snapshot profil saat RSVP, untuk analitik demografi
+  fakultas?: string;
+  angkatan?: string;
 }
 
 export interface Comment {

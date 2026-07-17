@@ -5,9 +5,10 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, MapPin, Tag, FileText, Type } from 'lucide-react';
+import { Calendar, MapPin, Tag, FileText, Type, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
+import { aiService } from '../services/aiService';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { CATEGORIES } from '../constants';
@@ -20,6 +21,7 @@ export function CreateEvent() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEditing);
   const [error, setError] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -146,7 +148,36 @@ export function CreateEvent() {
           />
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Deskripsi</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Deskripsi</label>
+              {aiService.isAvailable() && (
+                <button
+                  type="button"
+                  disabled={aiLoading || !formData.title.trim()}
+                  onClick={async () => {
+                    setAiLoading(true);
+                    setError('');
+                    try {
+                      const description = await aiService.generateEventDescription(
+                        formData.title,
+                        formData.category,
+                        formData.location
+                      );
+                      setFormData(prev => ({ ...prev, description }));
+                    } catch (err: any) {
+                      setError(err.message || 'Gagal generate deskripsi dengan AI.');
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-bold text-campus-blue hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title={!formData.title.trim() ? 'Isi judul event dulu' : 'Generate deskripsi dengan AI'}
+                >
+                  <Sparkles size={14} className={aiLoading ? 'animate-pulse' : ''} />
+                  {aiLoading ? 'Menulis...' : 'Generate dengan AI'}
+                </button>
+              )}
+            </div>
             <textarea
               required
               placeholder="Beri tahu mahasiswa tentang apa event ini..."

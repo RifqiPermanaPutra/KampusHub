@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Eye, QrCode, X } from 'lucide-react';
+import { Calendar, MapPin, Eye, QrCode, X, Award, Hourglass } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../contexts/AuthContext';
 import { rsvpService } from '../services/rsvpService';
@@ -8,6 +8,7 @@ import { eventService } from '../services/eventService';
 import { Event, RSVP } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { downloadCertificate, isEligibleForCertificate } from '../lib/certificate';
 
 export function MyRSVPs() {
   const { profile } = useAuth();
@@ -108,10 +109,16 @@ export function MyRSVPs() {
                       <Calendar size={48} />
                     </div>
                   )}
-                  <div className="absolute top-4 left-4">
+                  <div className="absolute top-4 left-4 flex gap-2">
                     <Badge variant="blue" className="shadow-sm backdrop-blur-md bg-white/90">
                       {event.category}
                     </Badge>
+                    {rsvp.status === 'waitlist' && (
+                      <Badge variant="gray" className="shadow-sm backdrop-blur-md bg-amber-100/90 text-amber-700">
+                        <Hourglass size={10} className="inline mr-1" />
+                        Daftar Tunggu
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="p-6 flex flex-col flex-1">
@@ -149,14 +156,27 @@ export function MyRSVPs() {
                       >
                         Batalkan
                       </Button>
-                      <Button 
-                        variant="primary" 
-                        size="sm"
-                        onClick={() => setTicketModalRsvp(rsvp)}
-                      >
-                        <QrCode size={16} className="mr-2" />
-                        Tiket
-                      </Button>
+                      {rsvp.status !== 'waitlist' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setTicketModalRsvp(rsvp)}
+                        >
+                          <QrCode size={16} className="mr-2" />
+                          Tiket
+                        </Button>
+                      )}
+                      {isEligibleForCertificate(rsvp, event) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                          onClick={() => downloadCertificate(rsvp, event)}
+                          title="Unduh Sertifikat Kehadiran"
+                        >
+                          <Award size={16} />
+                        </Button>
+                      )}
                       <Link to={`/event/${event.id}`}>
                         <Button variant="outline" size="sm" className="px-2">
                           <Eye size={16} />

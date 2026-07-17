@@ -144,9 +144,9 @@ export function TicketScanner() {
         </div>
 
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[600px]">
-          <h3 className="font-bold text-lg mb-4 text-gray-900">Daftar Kehadiran ({rsvps.filter(r => r.status === 'checked-in').length}/{rsvps.length})</h3>
+          <h3 className="font-bold text-lg mb-4 text-gray-900">Daftar Kehadiran ({rsvps.filter(r => r.status === 'checked-in').length}/{rsvps.filter(r => r.status !== 'waitlist').length})</h3>
           <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-            {rsvps.map(rsvp => (
+            {rsvps.filter(r => r.status !== 'waitlist').map(rsvp => (
               <div key={rsvp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                 <div>
                   <p className="font-bold text-sm text-gray-900">{rsvp.userName}</p>

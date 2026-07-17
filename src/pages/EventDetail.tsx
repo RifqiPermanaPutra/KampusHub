@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Send, MessageSquare, ShieldCheck, Trash2, Download, Edit } from 'lucide-react';
+import { Calendar, MapPin, Send, MessageSquare, ShieldCheck, Trash2, Download, Edit, BarChart3, Hourglass } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
@@ -24,7 +24,7 @@ export function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [hasRsvped, setHasRsvped] = useState(false);
+  const [myRsvp, setMyRsvp] = useState<RSVP | null>(null);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,8 +42,8 @@ export function EventDetail() {
         const r = await rsvpService.getRSVPsForEvent(id);
         setRsvps(r);
         if (profile) {
-          const has = await rsvpService.checkUserRSVP(id, profile.uid);
-          setHasRsvped(has);
+          const mine = await rsvpService.getUserRSVP(id, profile.uid);
+          setMyRsvp(mine);
         }
       }
       setLoading(false);
@@ -61,18 +61,24 @@ export function EventDetail() {
     };
   }, [id, profile?.uid]);
 
+  const registeredRsvps = rsvps.filter(r => r.status !== 'waitlist');
+  const waitlistRsvps = rsvps.filter(r => r.status === 'waitlist');
+  const isFull = event?.capacity !== undefined && registeredRsvps.length >= event.capacity;
+
   const handleRSVP = async () => {
-    if (!profile || !event || hasRsvped) return;
-    if (event.capacity && rsvps.length >= event.capacity) return; // double check
+    if (!profile || !event || myRsvp) return;
     setActionLoading(true);
     setActionError('');
     try {
-      await rsvpService.rsvpToEvent({
+      const status = await rsvpService.rsvpToEvent({
         eventId: event.id,
         userId: profile.uid,
         userName: profile.name,
-      });
-      setHasRsvped(true);
+        ...(profile.fakultas ? { fakultas: profile.fakultas } : {}),
+        ...(profile.angkatan ? { angkatan: profile.angkatan } : {}),
+      }, registeredRsvps.length);
+      const mine = await rsvpService.getUserRSVP(event.id, profile.uid);
+      setMyRsvp(mine);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
 
@@ -81,7 +87,9 @@ export function EventDetail() {
         await notificationService.sendNotification({
           userId: event.organizerId,
           eventId: event.id,
-          message: `${profile.name} telah RSVP ke event Anda "${event.title}".`
+          message: status === 'waitlist'
+            ? `${profile.name} masuk daftar tunggu event Anda "${event.title}".`
+            : `${profile.name} telah RSVP ke event Anda "${event.title}".`
         });
       }
     } catch (err) {
@@ -93,14 +101,23 @@ export function EventDetail() {
   };
 
   const handleCancelRSVP = async () => {
-    if (!profile || !event || !hasRsvped) return;
+    if (!profile || !event || !myRsvp) return;
     setActionLoading(true);
     setActionError('');
     try {
-      await rsvpService.cancelRSVP(event.id, profile.uid);
-      setHasRsvped(false);
+      const promoted = await rsvpService.cancelRSVP(event.id, profile.uid);
+      setMyRsvp(null);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
+
+      // Kabari peserta waitlist yang naik jadi terdaftar
+      if (promoted) {
+        await notificationService.sendNotification({
+          userId: promoted.userId,
+          eventId: event.id,
+          message: `Kabar baik! Anda naik dari daftar tunggu dan kini terdaftar di event "${event.title}".`
+        });
+      }
     } catch (err) {
       console.error(err);
       setActionError('Gagal membatalkan RSVP. Silakan coba lagi.');
@@ -111,9 +128,12 @@ export function EventDetail() {
 
   const handleExportCSV = () => {
     const csvContent = [
-      ['Name', 'RSVP Date'],
+      ['Name', 'Status', 'Fakultas', 'Angkatan', 'RSVP Date'],
       ...rsvps.map(r => [
-        r.userName, 
+        r.userName,
+        r.status || 'registered',
+        r.fakultas || '-',
+        r.angkatan || '-',
         new Date(r.createdAt).toLocaleString()
       ])
     ].map(e => e.join(",")).join("\n");
@@ -295,11 +315,16 @@ export function EventDetail() {
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Kehadiran</h4>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-campus-blue">{rsvps.length}</span>
+              <span className="text-4xl font-black text-campus-blue">{registeredRsvps.length}</span>
               <span className="text-gray-500 font-medium text-sm">
                 {event.capacity ? `/ ${event.capacity} mahasiswa` : 'mahasiswa hadir'}
               </span>
             </div>
+            {waitlistRsvps.length > 0 && (
+              <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                <Hourglass size={12} /> {waitlistRsvps.length} orang di daftar tunggu
+              </p>
+            )}
             {/* Mock avatars */}
             <div className="flex -space-x-3 overflow-hidden">
               {rsvps.slice(0, 5).map((rsvp) => (
@@ -319,24 +344,33 @@ export function EventDetail() {
             </div>
           </div>
 
-          <Button 
-            className={`w-full py-4 ${hasRsvped ? 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-200' : ''}`} 
-            size="lg" 
-            variant={hasRsvped ? 'outline' : 'primary'}
-            onClick={hasRsvped ? handleCancelRSVP : handleRSVP}
+          {myRsvp?.status === 'waitlist' && (
+            <div className="bg-amber-50 text-amber-700 p-3 rounded-xl text-sm font-medium border border-amber-200 flex items-center gap-2">
+              <Hourglass size={16} className="shrink-0" />
+              Anda di daftar tunggu (posisi #{waitlistRsvps
+                .slice()
+                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                .findIndex(r => r.userId === profile?.uid) + 1 || '?'}). Anda otomatis terdaftar jika ada slot kosong.
+            </div>
+          )}
+
+          <Button
+            className={`w-full py-4 ${myRsvp ? 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border-red-200' : ''}`}
+            size="lg"
+            variant={myRsvp ? 'outline' : 'primary'}
+            onClick={myRsvp ? handleCancelRSVP : handleRSVP}
             loading={actionLoading}
             disabled={
-              (!hasRsvped && event.capacity !== undefined && rsvps.length >= event.capacity) || 
               event.status !== 'approved' ||
-              (!hasRsvped && new Date(event.date).getTime() < new Date().getTime())
+              (!myRsvp && new Date(event.date).getTime() < new Date().getTime())
             }
           >
-            {hasRsvped 
-              ? 'Batalkan RSVP' 
+            {myRsvp
+              ? (myRsvp.status === 'waitlist' ? 'Keluar dari Daftar Tunggu' : 'Batalkan RSVP')
               : (new Date(event.date).getTime() < new Date().getTime())
                 ? 'Event Telah Berakhir'
-                : (!hasRsvped && event.capacity !== undefined && rsvps.length >= event.capacity) 
-                  ? 'Kuota Penuh'
+                : isFull
+                  ? 'Ikut Daftar Tunggu'
                   : 'RSVP Sekarang'}
           </Button>
 
@@ -357,14 +391,22 @@ export function EventDetail() {
           )}
 
           {(profile?.role === 'admin' || (profile?.role === 'panitia' && profile?.uid === event.organizerId)) && rsvps.length > 0 && (
-            <Button 
-              className="w-full" 
-              variant="outline"
-              onClick={handleExportCSV}
-            >
-              <Download size={16} className="mr-2" />
-              Download Data RSVP (CSV)
-            </Button>
+            <>
+              <Link to={`/event/${event.id}/analytics`}>
+                <Button className="w-full" variant="outline">
+                  <BarChart3 size={16} className="mr-2" />
+                  Lihat Analitik Event
+                </Button>
+              </Link>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={handleExportCSV}
+              >
+                <Download size={16} className="mr-2" />
+                Download Data RSVP (CSV)
+              </Button>
+            </>
           )}
 
           <div className="pt-6 border-t border-gray-50 space-y-4">
