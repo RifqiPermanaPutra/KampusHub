@@ -9,6 +9,8 @@ import { Calendar, MapPin, Tag, FileText, Type, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { aiService } from '../services/aiService';
+import { useToast } from '../contexts/ToastContext';
+import { usePageTitle } from '../lib/usePageTitle';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { CATEGORIES } from '../constants';
@@ -18,6 +20,8 @@ export function CreateEvent() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
+  const { showToast } = useToast();
+  usePageTitle(isEditing ? 'Edit Event' : 'Buat Event');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEditing);
   const [error, setError] = useState('');
@@ -74,6 +78,7 @@ export function CreateEvent() {
 
       if (isEditing && id) {
         await eventService.updateEvent(id, eventPayload);
+        showToast('Perubahan event berhasil disimpan.');
         navigate(`/event/${id}`);
       } else {
         await eventService.createEvent({
@@ -81,6 +86,7 @@ export function CreateEvent() {
           organizerId: profile.uid,
           organizerName: profile.name,
         });
+        showToast('Event berhasil dibuat dan menunggu persetujuan admin.');
         navigate('/');
       }
     } catch (err: any) {
@@ -255,14 +261,14 @@ export function CreateEvent() {
             className="flex-1"
             onClick={() => navigate(-1)}
           >
-            Cancel
+            Batal
           </Button>
           <Button 
             type="submit" 
             className="flex-1"
             loading={loading}
           >
-            {isEditing ? 'Save Changes' : 'Submit untuk Approval'}
+            {isEditing ? 'Simpan Perubahan' : 'Ajukan untuk Persetujuan'}
           </Button>
         </div>
       </form>

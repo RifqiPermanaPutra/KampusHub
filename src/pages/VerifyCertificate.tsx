@@ -8,6 +8,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ShieldCheck, ShieldX, Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { parseRsvpDocId } from '../lib/rsvp-logic';
+import { usePageTitle } from '../lib/usePageTitle';
 import { rsvpService } from '../services/rsvpService';
 import { eventService } from '../services/eventService';
 import { Event, RSVP } from '../types';
@@ -20,6 +21,7 @@ type VerifyState =
 export function VerifyCertificate() {
   const { code } = useParams<{ code: string }>();
   const [state, setState] = useState<VerifyState>({ kind: 'loading' });
+  usePageTitle('Verifikasi Sertifikat');
 
   useEffect(() => {
     const verify = async () => {

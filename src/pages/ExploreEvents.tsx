@@ -12,8 +12,11 @@ import { EventCard } from '../components/EventCard';
 import { CATEGORIES } from '../constants';
 import { Search } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { usePageTitle } from '../lib/usePageTitle';
+import { EventGridSkeleton } from '../components/ui/Skeleton';
 
 export function ExploreEvents() {
+  usePageTitle('Jelajahi Event');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('Semua Event');
@@ -49,8 +52,9 @@ export function ExploreEvents() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-campus-blue border-t-transparent" />
+      <div className="max-w-6xl mx-auto space-y-12">
+        <div className="h-12 w-72 max-w-full animate-pulse bg-gray-200/70 rounded-xl" />
+        <EventGridSkeleton count={8} />
       </div>
     );
   }
@@ -59,8 +63,8 @@ export function ExploreEvents() {
     <div className="max-w-6xl mx-auto space-y-12">
       <div className="flex flex-col gap-6 md:flex-row md:items-end justify-between border-b border-gray-100 pb-8">
         <div>
-          <h2 className="editorial-title text-5xl font-bold text-campus-blue mb-2">
-            Explore Event
+          <h2 className="editorial-title text-3xl sm:text-5xl font-bold text-campus-blue mb-2">
+            Jelajahi Event
           </h2>
           <p className="text-gray-500 font-medium">Temukan apa yang sedang terjadi di sekitar kampus.</p>
         </div>

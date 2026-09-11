@@ -12,6 +12,7 @@ import { rsvpService } from '../services/rsvpService';
 import { buildEventAnalytics, EventAnalytics as Analytics } from '../lib/analytics';
 import { Event } from '../types';
 import { SimpleBarChart, TimelineChart } from '../components/charts/SimpleBarChart';
+import { usePageTitle } from '../lib/usePageTitle';
 
 function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string | number; accent: string }) {
   return (
@@ -32,6 +33,7 @@ export function EventAnalytics() {
   const [event, setEvent] = useState<Event | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+  usePageTitle('Analitik Event');
 
   useEffect(() => {
     if (!id || !profile) return;

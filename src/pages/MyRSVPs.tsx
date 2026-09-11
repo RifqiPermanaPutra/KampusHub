@@ -9,9 +9,15 @@ import { Event, RSVP } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { downloadCertificate, isEligibleForCertificate } from '../lib/certificate';
+import { Modal } from '../components/ui/Modal';
+import { useToast } from '../contexts/ToastContext';
+import { usePageTitle } from '../lib/usePageTitle';
+import { EventGridSkeleton } from '../components/ui/Skeleton';
 
 export function MyRSVPs() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
+  usePageTitle('RSVP Saya');
   const [rsvps, setRsvps] = useState<(RSVP & { event?: Event })[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
@@ -25,6 +31,7 @@ export function MyRSVPs() {
     try {
       await rsvpService.cancelRSVP(eventId, profile.uid);
       setRsvps(prev => prev.filter(r => r.eventId !== eventId));
+      showToast('RSVP Anda telah dibatalkan.', 'info');
     } catch (err) {
       console.error(err);
       setError('Gagal membatalkan RSVP. Silakan coba lagi.');
@@ -61,8 +68,12 @@ export function MyRSVPs() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-campus-blue border-t-transparent" />
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div>
+          <h2 className="editorial-title text-3xl sm:text-4xl font-bold text-campus-blue mb-2">RSVP Saya</h2>
+          <p className="text-gray-500">Event yang sudah Anda daftarkan untuk dihadiri.</p>
+        </div>
+        <EventGridSkeleton count={4} />
       </div>
     );
   }
@@ -71,7 +82,7 @@ export function MyRSVPs() {
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="editorial-title text-4xl font-bold text-campus-blue mb-2">RSVP Saya</h2>
+          <h2 className="editorial-title text-3xl sm:text-4xl font-bold text-campus-blue mb-2">RSVP Saya</h2>
           <p className="text-gray-500">Event yang sudah Anda daftarkan untuk dihadiri.</p>
         </div>
       </div>
@@ -88,7 +99,7 @@ export function MyRSVPs() {
           <h3 className="text-lg font-bold text-gray-900 mb-2">Belum ada RSVP</h3>
           <p className="text-gray-500 mb-6">Anda belum mendaftar ke event manapun.</p>
           <Link to="/explore">
-            <Button>Explore Event</Button>
+            <Button>Jelajahi Event</Button>
           </Link>
         </div>
       ) : (
@@ -193,10 +204,10 @@ export function MyRSVPs() {
 
       {/* Ticket Modal */}
       {ticketModalRsvp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
-            <button 
+        <Modal onClose={() => setTicketModalRsvp(null)}>
+            <button
               onClick={() => setTicketModalRsvp(null)}
+              aria-label="Tutup tiket"
               className="absolute top-4 right-4 p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
             >
               <X size={20} />
@@ -230,8 +241,7 @@ export function MyRSVPs() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

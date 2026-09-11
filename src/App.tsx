@@ -10,6 +10,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { Layout } from './components/Layout';
 import { Guard } from './components/Guard';
 
@@ -33,6 +34,7 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <ToastProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -73,6 +75,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

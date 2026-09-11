@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { usePageTitle } from '../lib/usePageTitle';
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -13,6 +14,7 @@ import { Input } from '../components/ui/Input';
 import { UserRole } from '../types';
 
 export function Register() {
+  usePageTitle('Daftar');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

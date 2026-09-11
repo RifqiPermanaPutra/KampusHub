@@ -12,6 +12,7 @@ import { rsvpService } from '../services/rsvpService';
 import { Event, RSVP } from '../types';
 import { ArrowLeft, CheckCircle, AlertCircle, ScanLine } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { usePageTitle } from '../lib/usePageTitle';
 
 export function TicketScanner() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ export function TicketScanner() {
   const [scanResult, setScanResult] = useState<{ status: 'success' | 'error', message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  usePageTitle('Scanner Tiket');
 
   useEffect(() => {
     if (!id || !profile) return;

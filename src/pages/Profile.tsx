@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { usePageTitle } from '../lib/usePageTitle';
 import { useAuth } from '../contexts/AuthContext';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -14,6 +15,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export function Profile() {
+  usePageTitle('Profil');
   const { profile, reloadProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile?.name || '');

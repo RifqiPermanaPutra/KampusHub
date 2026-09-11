@@ -14,9 +14,15 @@ import { Link } from 'react-router-dom';
 import { Check, X, Eye, Edit, Trash2, AlertTriangle, Users, Calendar } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { Modal } from '../components/ui/Modal';
+import { useToast } from '../contexts/ToastContext';
+import { usePageTitle } from '../lib/usePageTitle';
+import { STATUS_LABELS } from '../constants';
 
 export function Dashboard() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
+  usePageTitle('Manajemen');
   const [events, setEvents] = useState<Event[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +60,7 @@ export function Dashboard() {
     try {
       await eventService.updateEvent(id, { status });
       setEvents(events.map(e => e.id === id ? { ...e, status } : e));
+      showToast(status === 'approved' ? 'Event disetujui.' : 'Event ditolak.', status === 'approved' ? 'success' : 'info');
     } catch (err) {
       console.error(err);
       setActionError('Gagal memperbarui status event. Silakan coba lagi.');
@@ -67,6 +74,7 @@ export function Dashboard() {
         await eventService.deleteEvent(eventToDelete);
         setEvents(events.filter(e => e.id !== eventToDelete));
         setEventToDelete(null);
+        showToast('Event telah dihapus.', 'info');
       } catch (err) {
         console.error(err);
         setActionError('Gagal menghapus event. Silakan coba lagi.');
@@ -87,7 +95,7 @@ export function Dashboard() {
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="editorial-title text-4xl font-bold text-campus-blue">Management Dashboard</h2>
+          <h2 className="editorial-title text-3xl sm:text-4xl font-bold text-campus-blue">Dashboard Manajemen</h2>
           <p className="text-gray-500">Kelola event dan permintaan Anda.</p>
         </div>
         
@@ -100,7 +108,7 @@ export function Dashboard() {
               }`}
             >
               <Calendar size={18} />
-              Events
+              Event
             </button>
             <button
               onClick={() => setActiveTab('users')}
@@ -109,7 +117,7 @@ export function Dashboard() {
               }`}
             >
               <Users size={18} />
-              Users
+              Pengguna
             </button>
           </div>
         )}
@@ -130,7 +138,7 @@ export function Dashboard() {
                   <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Event</th>
                   <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Tanggal</th>
                   <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Status</th>
-                  <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right whitespace-nowrap">Actions</th>
+                  <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest text-right whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -138,14 +146,14 @@ export function Dashboard() {
                   <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-8 py-6">
                       <p className="font-bold text-gray-900 line-clamp-1">{event.title}</p>
-                      <p className="text-xs text-gray-400">{event.category}</p>
+                      <p className="text-xs text-gray-500">{event.category}</p>
                     </td>
                     <td className="px-8 py-6 text-sm text-gray-500 whitespace-nowrap">
                       {format(new Date(event.date), 'MMM d, yyyy')}
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap">
                       <Badge variant={event.status === 'approved' ? 'green' : event.status === 'pending' ? 'blue' : 'red'}>
-                        {event.status}
+                        {STATUS_LABELS[event.status] ?? event.status}
                       </Badge>
                     </td>
                     <td className="px-8 py-6 text-right">
@@ -210,7 +218,7 @@ export function Dashboard() {
              <table className="w-full text-left">
                <thead>
                  <tr className="bg-gray-50 border-b border-gray-100">
-                   <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">User</th>
+                   <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Pengguna</th>
                    <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Role</th>
                    <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Tanggal Bergabung</th>
                  </tr>
@@ -225,7 +233,7 @@ export function Dashboard() {
                          </div>
                          <div>
                            <p className="font-bold text-gray-900 line-clamp-1">{user.name}</p>
-                           <p className="text-xs text-gray-400">{user.email}</p>
+                           <p className="text-xs text-gray-500">{user.email}</p>
                          </div>
                        </div>
                      </td>
@@ -249,34 +257,34 @@ export function Dashboard() {
       )}
 
       {eventToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl">
+        <Modal onClose={() => setEventToDelete(null)}>
+          <div className="space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
                 <AlertTriangle size={32} />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Event?</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Hapus Event?</h3>
                 <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan. Event dan semua RSVP-nya akan dihapus permanen.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setEventToDelete(null)}
               >
-                Cancel
+                Batal
               </Button>
-              <Button 
+              <Button
                 className="flex-1 bg-red-600 hover:bg-red-700"
                 onClick={confirmDelete}
               >
-                Delete
+                Hapus
               </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -4,7 +4,9 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePageTitle } from '../lib/usePageTitle';
 import { notificationService } from '../services/notificationService';
 import { Notification } from '../types';
 import { Bell, CheckCircle2 } from 'lucide-react';
@@ -14,6 +16,8 @@ import { Button } from '../components/ui/Button';
 
 export function Notifications() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
+  usePageTitle('Notifikasi');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +56,7 @@ export function Notifications() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="flex items-end justify-between">
-        <h2 className="editorial-title text-4xl font-bold text-campus-blue">Notifikasi</h2>
+        <h2 className="editorial-title text-3xl sm:text-4xl font-bold text-campus-blue">Notifikasi</h2>
         <div className="flex items-center gap-4">
           {unreadCount > 0 && (
             <Button 
@@ -74,14 +78,26 @@ export function Notifications() {
       <div className="space-y-4">
         {notifications.length > 0 ? (
           notifications.map((notif) => (
-            <div 
-              key={notif.id} 
-              onClick={() => !notif.isRead && handleMarkAsRead(notif.id)}
+            <div
+              key={notif.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                if (!notif.isRead) handleMarkAsRead(notif.id);
+                if (notif.eventId) navigate(`/event/${notif.eventId}`);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (!notif.isRead) handleMarkAsRead(notif.id);
+                  if (notif.eventId) navigate(`/event/${notif.eventId}`);
+                }
+              }}
               className={cn(
-                "p-6 rounded-3xl border transition-all flex gap-4",
-                notif.isRead 
-                  ? "bg-white border-gray-100" 
-                  : "bg-blue-50 border-blue-100 shadow-lg shadow-blue-900/5 ring-1 ring-blue-200 cursor-pointer hover:bg-blue-50/70"
+                "p-6 rounded-3xl border transition-all flex gap-4 cursor-pointer",
+                notif.isRead
+                  ? "bg-white border-gray-100 hover:bg-gray-50"
+                  : "bg-blue-50 border-blue-100 shadow-lg shadow-blue-900/5 ring-1 ring-blue-200 hover:bg-blue-50/70"
               )}
             >
               <div className={cn(
@@ -94,7 +110,7 @@ export function Notifications() {
                 <p className={cn("text-sm", notif.isRead ? "text-gray-600" : "text-campus-blue font-bold")}>
                   {notif.message}
                 </p>
-                <p className="text-[10px] text-gray-400 font-medium">
+                <p className="text-[10px] text-gray-500 font-medium">
                   {format(new Date(notif.createdAt), 'PPPP • p')}
                 </p>
               </div>

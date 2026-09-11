@@ -11,9 +11,12 @@ import { AnnouncementCard } from '../components/AnnouncementCard';
 import { EventCard } from '../components/EventCard';
 import { CATEGORIES } from '../constants';
 import { cn } from '../lib/utils';
+import { usePageTitle } from '../lib/usePageTitle';
+import { EventGridSkeleton } from '../components/ui/Skeleton';
 
 export function Home() {
   const { profile } = useAuth();
+  usePageTitle('Beranda');
   const [events, setEvents] = useState<Event[]>([]);
   const [recommended, setRecommended] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,8 +41,9 @@ export function Home() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-campus-blue border-t-transparent" />
+      <div className="max-w-6xl mx-auto space-y-12">
+        <div className="h-10 w-72 max-w-full animate-pulse bg-gray-200/70 rounded-xl" />
+        <EventGridSkeleton count={6} />
       </div>
     );
   }
@@ -49,7 +53,7 @@ export function Home() {
       {/* Featured Section */}
       <section>
         <div className="flex items-end justify-between mb-8">
-          <h2 className="editorial-title text-4xl font-bold text-campus-blue">
+          <h2 className="editorial-title text-3xl sm:text-4xl font-bold text-campus-blue">
             Event Kampus Pilihan
           </h2>
           <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-none">
@@ -81,7 +85,7 @@ export function Home() {
         <section>
           <div className="flex items-center gap-2 mb-8">
             <Sparkles size={16} className="text-campus-blue" />
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
               Rekomendasi Untuk Anda
             </h3>
           </div>
@@ -102,7 +106,7 @@ export function Home() {
 
       {/* Recently Posted Section */}
       <section>
-        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">
+        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-8">
           Baru Saja Ditambahkan
         </h3>
         

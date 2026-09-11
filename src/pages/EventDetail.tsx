@@ -16,11 +16,15 @@ import { Event, RSVP, Comment } from '../types';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { useToast } from '../contexts/ToastContext';
+import { usePageTitle } from '../lib/usePageTitle';
 
 export function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -31,6 +35,8 @@ export function EventDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
+
+  usePageTitle(event?.title);
 
   useEffect(() => {
     if (!id) return;
@@ -82,6 +88,11 @@ export function EventDetail() {
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
 
+      showToast(status === 'waitlist'
+        ? 'Kuota penuh — Anda masuk daftar tunggu.'
+        : 'RSVP berhasil! Tiket tersedia di halaman RSVP Saya.',
+        status === 'waitlist' ? 'info' : 'success');
+
       // Send notification to the organizer
       if (profile.uid !== event.organizerId) {
         await notificationService.sendNotification({
@@ -109,6 +120,7 @@ export function EventDetail() {
       setMyRsvp(null);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
+      showToast('RSVP Anda telah dibatalkan.', 'info');
 
       // Kabari peserta waitlist yang naik jadi terdaftar
       if (promoted) {
@@ -183,6 +195,7 @@ export function EventDetail() {
     try {
       await eventService.updateEvent(event.id, { status });
       setEvent({ ...event, status });
+      showToast(status === 'approved' ? 'Event disetujui.' : 'Event ditolak.', status === 'approved' ? 'success' : 'info');
 
       // Notify the organizer about the admin decision
       await notificationService.sendNotification({
@@ -241,7 +254,7 @@ export function EventDetail() {
             )}
             <Badge variant="blue">{event.category}</Badge>
           </div>
-          <h1 className="editorial-title text-6xl font-bold text-campus-blue leading-[1.1]">
+          <h1 className="editorial-title text-3xl sm:text-4xl lg:text-6xl font-bold text-campus-blue leading-[1.1]">
             {event.title}
           </h1>
           
@@ -264,7 +277,7 @@ export function EventDetail() {
         )}
 
         <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tentang Event Ini</h3>
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Tentang Event Ini</h3>
           <p className="text-lg text-gray-700 leading-relaxed whitespace-pre-wrap">
             {event.description}
           </p>
@@ -299,7 +312,7 @@ export function EventDetail() {
               <div key={comment.id} className="bg-white p-6 rounded-2xl border border-gray-50 shadow-sm space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-sm text-campus-blue">{comment.userName}</span>
-                  <span className="text-[10px] text-gray-400">{format(new Date(comment.createdAt), 'MMM d, p')}</span>
+                  <span className="text-[10px] text-gray-500">{format(new Date(comment.createdAt), 'MMM d, p')}</span>
                 </div>
                 <p className="text-sm text-gray-600 leading-relaxed">{comment.body}</p>
               </div>
@@ -313,7 +326,7 @@ export function EventDetail() {
         {/* RSVP Card */}
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl shadow-blue-900/5 space-y-6 sticky top-8">
           <div className="space-y-2">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Kehadiran</h4>
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Kehadiran</h4>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-black text-campus-blue">{registeredRsvps.length}</span>
               <span className="text-gray-500 font-medium text-sm">
@@ -410,7 +423,7 @@ export function EventDetail() {
           )}
 
           <div className="pt-6 border-t border-gray-50 space-y-4">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Penyelenggara</h4>
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Penyelenggara</h4>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-campus-blue font-bold">
                 {event.organizerName[0]}
@@ -428,25 +441,25 @@ export function EventDetail() {
               <div className="flex justify-between items-center text-red-500">
                 <div className="flex items-center gap-2">
                   <ShieldCheck size={16} />
-                  <span className="text-xs font-bold uppercase tracking-widest">Management Actions</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">Aksi Pengelolaan</span>
                 </div>
               </div>
-              
+
               {profile?.role === 'admin' && event.status === 'pending' && (
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <Button 
-                    onClick={() => handleAdminDecision('approved')} 
+                  <Button
+                    onClick={() => handleAdminDecision('approved')}
                     className="bg-green-600 hover:bg-green-700 shadow-green-900/20"
                     disabled={actionLoading}
                   >
-                    Approve
+                    Setujui
                   </Button>
-                  <Button 
-                    onClick={() => handleAdminDecision('rejected')} 
+                  <Button
+                    onClick={() => handleAdminDecision('rejected')}
                     className="bg-red-600 hover:bg-red-700 shadow-red-900/20"
                     disabled={actionLoading}
                   >
-                    Reject
+                    Tolak
                   </Button>
                 </div>
               )}
@@ -469,7 +482,7 @@ export function EventDetail() {
                 disabled={actionLoading}
               >
                 <Trash2 size={18} className="mr-2" />
-                Delete Event
+                Hapus Event
               </Button>
             </div>
           )}
@@ -477,36 +490,36 @@ export function EventDetail() {
       </div>
 
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl">
+        <Modal onClose={() => setShowDeleteModal(false)}>
+          <div className="space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
                 <Trash2 size={32} />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Event?</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Hapus Event?</h3>
                 <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan. Event dan semua RSVP-nya akan dihapus permanen.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setShowDeleteModal(false)}
                 disabled={actionLoading}
               >
-                Cancel
+                Batal
               </Button>
-              <Button 
+              <Button
                 className="flex-1 bg-red-600 hover:bg-red-700"
                 onClick={handleDeleteEvent}
                 loading={actionLoading}
               >
-                Delete
+                Hapus
               </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

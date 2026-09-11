@@ -14,7 +14,7 @@ export const CATEGORIES = [
 ];
 
 export const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
+  pending: 'Menunggu',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
 };
