@@ -14,6 +14,7 @@ import { Input } from '../components/ui/Input';
 import { UserRole } from '../types';
 import { AuthShell, AuthDivider } from '../components/AuthShell';
 import { RoleToggle } from '../components/RoleToggle';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Register() {
   usePageTitle('Daftar');
@@ -36,6 +37,7 @@ export function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { reloadProfile } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +64,15 @@ export function Register() {
         ...(role === 'mahasiswa' ? { npm, fakultas, jurusan, angkatan } : {}),
         ...(role === 'panitia' ? { organisasi, jabatan, noTelepon } : {}),
       });
+
+      /*
+       * WAJIB sebelum berpindah halaman. AuthContext sudah membaca profil saat
+       * status login berubah, yaitu sebelum baris di atas sempat ditulis, jadi
+       * yang tersimpan di context masih null. Tanpa dimuat ulang, Guard akan
+       * menyimpulkan profil belum ada dan melempar pengguna yang baru saja
+       * mengisi form lengkap ke halaman Lengkapi Profil.
+       */
+      await reloadProfile();
 
       navigate('/');
     } catch (err) {

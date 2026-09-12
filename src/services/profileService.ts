@@ -34,9 +34,17 @@ export const profileService = {
     return data ? rowToProfile(data as ProfileRow) : null;
   },
 
+  /**
+   * Memakai upsert yang mengabaikan duplikat, bukan insert biasa: kalau profil
+   * sudah sempat dibuat (misalnya pengguna menekan tombol dua kali, atau sempat
+   * melewati halaman Lengkapi Profil), panggilan kedua tidak menimbulkan galat
+   * kunci ganda dan tidak menimpa data yang sudah benar.
+   */
   async createProfile(profile: UserProfile): Promise<void> {
     try {
-      const { error } = await supabase.from(TABLE).insert(profileToRow(profile));
+      const { error } = await supabase
+        .from(TABLE)
+        .upsert(profileToRow(profile), { onConflict: 'id', ignoreDuplicates: true });
       if (error) throw error;
     } catch (error) {
       throwDbError(error, OperationType.CREATE, TABLE);
