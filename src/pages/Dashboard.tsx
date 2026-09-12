@@ -366,7 +366,7 @@ export function Dashboard() {
               </div>
               <div>
                 <h3 className="editorial-title text-2xl text-ink mb-2">Hapus event?</h3>
-                <p className="text-sm text-ink/70">Tindakan ini tidak dapat dibatalkan. Event dan semua RSVP-nya akan dihapus permanen.</p>
+                <p className="text-sm text-ink/70">Tindakan ini tidak dapat dibatalkan. Event dan semua pendaftarannya akan dihapus permanen.</p>
               </div>
             </div>
             <div className="flex gap-3">

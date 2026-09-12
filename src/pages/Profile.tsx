@@ -40,7 +40,7 @@ export function Profile() {
   const [error, setError] = useState('');
   const [rekap, setRekap] = useState({ total: 0, hadir: 0, waitlist: 0 });
 
-  // Rekap keikutsertaan dari RSVP milik pengguna.
+  // Rekap keikutsertaan dari pendaftaran milik pengguna.
   useEffect(() => {
     if (!profile) return;
     let batal = false;
@@ -192,7 +192,7 @@ export function Profile() {
               * Kartu ini sebelumnya berbunyi "KampusHub Pro", menjanjikan
               * tingkatan produk yang tidak pernah ada. Diganti keterangan yang
               * benar dan memang perlu diketahui pengguna: data apa yang ikut
-              * terkirim ke panitia setiap kali dia RSVP.
+              * terkirim ke panitia setiap kali dia mendaftar ke sebuah event.
               */}
             <div className="tape rounded-xl border-2 border-ink bg-stabilo p-7 flex flex-col items-center justify-center text-center space-y-3 rotate-1 motion-reduce:rotate-0">
               <div className="w-14 h-14 bg-white rounded-lg border-2 border-ink flex items-center justify-center text-ink">
@@ -200,7 +200,7 @@ export function Profile() {
               </div>
               <p className="editorial-title text-2xl text-ink">Data yang dibagikan</p>
               <p className="text-sm text-ink/80 font-medium">
-                Saat Anda RSVP, nama Anda muncul di daftar peserta event itu dan bisa
+                Saat Anda mendaftar ke sebuah event, nama Anda muncul di daftar peserta event itu dan bisa
                 dilihat pengguna lain yang membukanya. Panitia event juga menerima
                 fakultas dan angkatan Anda untuk rekap kehadiran. Email dan nomor
                 telepon tidak dibagikan.

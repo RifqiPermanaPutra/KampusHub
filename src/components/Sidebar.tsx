@@ -23,7 +23,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const links = [
     { to: '/', label: 'Beranda', icon: Home },
     { to: '/explore', label: 'Jelajahi Event', icon: Calendar },
-    { to: '/my-rsvps', label: 'RSVP Saya', icon: Ticket },
+    { to: '/my-rsvps', label: 'Pendaftaran Saya', icon: Ticket },
     { to: '/saved', label: 'Disimpan', icon: Bookmark },
     { to: '/notifications', label: 'Notifikasi', icon: Bell },
     { to: '/profile', label: 'Profil', icon: User },

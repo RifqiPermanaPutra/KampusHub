@@ -19,7 +19,7 @@ const STYLES: Record<StatusKind, { className: string; icon: LucideIcon }> = {
 };
 
 /**
- * Status event/RSVP yang terbaca sekilas: warna + ikon + teks,
+ * Status event dan pendaftaran yang terbaca sekilas: warna + ikon + teks,
  * jadi tidak bergantung pada warna saja.
  */
 export function StatusPill({

@@ -131,7 +131,7 @@ export function EventDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
-  // Cap "Terdaftar" yang muncul sesaat setelah RSVP berhasil.
+  // Cap "Terdaftar" yang muncul sesaat setelah pendaftaran berhasil.
   const [showStamp, setShowStamp] = useState(false);
   // Tautan yang ditampilkan saat penyalinan otomatis ditolak browser.
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -217,7 +217,7 @@ export function EventDetail() {
 
       showToast(status === 'waitlist'
         ? 'Kuota penuh. Anda masuk daftar tunggu.'
-        : 'RSVP berhasil! Tiket tersedia di halaman RSVP Saya.',
+        : 'Pendaftaran berhasil! Tiket tersedia di halaman Pendaftaran Saya.',
         status === 'waitlist' ? 'info' : 'success');
 
       // Send notification to the organizer
@@ -227,12 +227,12 @@ export function EventDetail() {
           eventId: event.id,
           message: status === 'waitlist'
             ? `${profile.name} masuk daftar tunggu event Anda "${event.title}".`
-            : `${profile.name} telah RSVP ke event Anda "${event.title}".`
+            : `${profile.name} mendaftar ke event Anda "${event.title}".`
         });
       }
     } catch (err) {
       console.error(err);
-      setActionError('Gagal melakukan RSVP. Silakan coba lagi.');
+      setActionError('Gagal mendaftar. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -247,7 +247,7 @@ export function EventDetail() {
       setMyRsvp(null);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
-      showToast('RSVP Anda telah dibatalkan.', 'info');
+      showToast('Pendaftaran Anda telah dibatalkan.', 'info');
 
       // Kabari peserta waitlist yang naik jadi terdaftar
       if (promoted) {
@@ -259,7 +259,7 @@ export function EventDetail() {
       }
     } catch (err) {
       console.error(err);
-      setActionError('Gagal membatalkan RSVP. Silakan coba lagi.');
+      setActionError('Gagal membatalkan pendaftaran. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -267,7 +267,7 @@ export function EventDetail() {
 
   const handleExportCSV = () => {
     const csvContent = [
-      ['Name', 'Status', 'Fakultas', 'Angkatan', 'RSVP Date'],
+      ['Nama', 'Status', 'Fakultas', 'Angkatan', 'Tanggal Daftar'],
       ...rsvps.map(r => [
         r.userName,
         r.status || 'registered',
@@ -281,7 +281,7 @@ export function EventDetail() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `RSVP_${event?.title}_${new Date().getTime()}.csv`);
+    link.setAttribute("download", `Peserta_${event?.title}_${new Date().getTime()}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -497,7 +497,7 @@ export function EventDetail() {
 
       {/* Sidebar */}
       <aside className="space-y-8 min-w-0">
-        {/* RSVP Card */}
+        {/* Kartu pendaftaran */}
         <div className="relative mading-card p-6 space-y-6 lg:sticky lg:top-2">
           {showStamp && (
             <span
@@ -520,7 +520,7 @@ export function EventDetail() {
 
           {isPast && (
             <div className="rounded-lg border-2 border-ink bg-ink p-3 text-sm font-semibold text-white">
-              Event sudah selesai. Kalau Anda check-in, sertifikat bisa diunduh dari halaman RSVP Saya.
+              Event sudah selesai. Kalau Anda check-in, sertifikat bisa diunduh dari halaman Pendaftaran Saya.
             </div>
           )}
 
@@ -601,7 +601,7 @@ export function EventDetail() {
                   ? 'Ikut Daftar Tunggu'
                   : isLive
                     ? 'Ikut Sekarang →'
-                    : 'RSVP Sekarang →'}
+                    : 'Daftar Sekarang →'}
           </Button>
 
           {catatanDeadline && !isPast && (
@@ -652,7 +652,7 @@ export function EventDetail() {
                   </Link>
                   <Button className="w-full" variant="outline" onClick={handleExportCSV}>
                     <Download size={16} className="mr-2" />
-                    Download Data RSVP (CSV)
+                    Unduh Data Peserta (CSV)
                   </Button>
                 </>
               )}
@@ -662,12 +662,21 @@ export function EventDetail() {
           <div className="pt-5 border-t-2 border-dashed border-ink/20 space-y-3">
             <h4 className="eyebrow">Penyelenggara</h4>
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-lg border-2 border-ink bg-stiker flex items-center justify-center text-ink font-editorial font-extrabold text-lg -rotate-3">
-                {event.organizerName[0]}
-              </div>
+              <Avatar
+                nama={event.organizerName}
+                className="w-11 h-11 !rounded-lg text-lg -rotate-3 motion-reduce:rotate-0"
+              />
               <div className="min-w-0">
                 <p className="font-bold text-ink truncate">{event.organizerName}</p>
-                <p className="text-xs text-ink/70">Organisasi Mahasiswa</p>
+                {/*
+                  * Baris di bawah nama sebelumnya bertuliskan "Organisasi Mahasiswa"
+                  * untuk siapa pun penyelenggaranya, padahal bisa saja UKM, himpunan,
+                  * atau fakultas. Diganti tanggal pembuatan event, yang datanya memang
+                  * ada dan benar.
+                  */}
+                <p className="text-xs text-ink/70">
+                  Dibuat {format(new Date(event.createdAt), 'd MMMM yyyy', { locale: localeId })}
+                </p>
               </div>
             </div>
           </div>
@@ -741,7 +750,7 @@ export function EventDetail() {
               </div>
               <div>
                 <h3 className="editorial-title text-2xl text-ink mb-2">Hapus event?</h3>
-                <p className="text-sm text-ink/70">Tindakan ini tidak dapat dibatalkan. Event dan semua RSVP-nya akan dihapus permanen.</p>
+                <p className="text-sm text-ink/70">Tindakan ini tidak dapat dibatalkan. Event dan semua pendaftarannya akan dihapus permanen.</p>
               </div>
             </div>
             <div className="flex gap-3">

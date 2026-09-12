@@ -55,7 +55,7 @@ export function SavedEvents() {
       <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
         Event <span className="marker marker-draw">Disimpan</span>
       </h2>
-      <p className="text-ink/70">Kamu tetap dapat pengingat H-1 untuk event di sini, walau belum RSVP.</p>
+      <p className="text-ink/70">Kamu tetap dapat pengingat H-1 untuk event di sini, walau belum mendaftar.</p>
     </div>
   );
 

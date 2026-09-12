@@ -28,7 +28,7 @@ function PageHeading() {
     <div>
       <p className="eyebrow mb-2">Tiket dan pendaftaran</p>
       <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
-        RSVP <span className="marker">Saya</span>
+        Pendaftaran <span className="marker">Saya</span>
       </h2>
       <p className="text-ink/70">Event yang sudah Anda daftarkan untuk dihadiri.</p>
     </div>
@@ -111,7 +111,7 @@ function TicketModal({ rsvp, holderName, onClose }: { rsvp: RsvpWithEvent; holde
 
         {checkedIn ? (
           <div className="rounded-lg border-2 border-ink bg-daun/30 p-3 text-sm font-semibold text-ink">
-            Sudah check-in. Sertifikat bisa diunduh dari daftar RSVP.
+            Sudah check-in. Sertifikat bisa diunduh dari kartu ini.
           </div>
         ) : phase === 'past' ? (
           <div className="rounded-lg border-2 border-ink bg-ink p-3 text-sm font-semibold text-white">
@@ -130,7 +130,7 @@ function TicketModal({ rsvp, holderName, onClose }: { rsvp: RsvpWithEvent; holde
 export function MyRSVPs() {
   const { profile } = useAuth();
   const { showToast } = useToast();
-  usePageTitle('RSVP Saya');
+  usePageTitle('Pendaftaran Saya');
   const [rsvps, setRsvps] = useState<RsvpWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
@@ -144,10 +144,10 @@ export function MyRSVPs() {
     try {
       await rsvpService.cancelRSVP(eventId);
       setRsvps(prev => prev.filter(r => r.eventId !== eventId));
-      showToast('RSVP Anda telah dibatalkan.', 'info');
+      showToast('Pendaftaran Anda telah dibatalkan.', 'info');
     } catch (err) {
       console.error(err);
-      setError('Gagal membatalkan RSVP. Silakan coba lagi.');
+      setError('Gagal membatalkan pendaftaran. Silakan coba lagi.');
     } finally {
       setCancelingId(null);
     }
@@ -200,7 +200,7 @@ export function MyRSVPs() {
             <Ticket size={24} className="text-ink" />
           </div>
           <h3 className="editorial-title text-2xl text-ink">Belum ada tiket</h3>
-          <p className="text-ink/70">Anda belum mendaftar ke event manapun. Cari event yang menarik lalu RSVP.</p>
+          <p className="text-ink/70">Anda belum mendaftar ke event manapun. Cari event yang menarik lalu daftar.</p>
           <Link to="/explore" className="inline-block">
             <Button tabIndex={-1}>Jelajahi Event</Button>
           </Link>
@@ -250,7 +250,7 @@ export function MyRSVPs() {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t-2 border-dashed border-ink/20">
-                    <span className="stamp text-ink/60">RSVP {format(new Date(rsvp.createdAt), 'dd.MM.yyyy')}</span>
+                    <span className="stamp text-ink/60">Mendaftar {format(new Date(rsvp.createdAt), 'dd.MM.yyyy')}</span>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"

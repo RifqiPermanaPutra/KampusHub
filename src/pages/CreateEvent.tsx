@@ -280,7 +280,7 @@ export function CreateEvent() {
                 onChange={(e) => setFormData({ ...formData, rsvpDeadline: e.target.value })}
               />
               <p className="text-xs text-ink/60">
-                Setelah lewat batas ini tombol RSVP tertutup otomatis. Kosongkan kalau pendaftaran dibuka sampai hari-H.
+                Setelah lewat batas ini tombol daftar tertutup otomatis. Kosongkan kalau pendaftaran dibuka sampai hari-H.
               </p>
               {deadlineSetelahMulai && (
                 <p className="mading-alert">Batas waktu pendaftaran melewati waktu mulai event. Perbaiki dulu supaya tidak membingungkan peserta.</p>

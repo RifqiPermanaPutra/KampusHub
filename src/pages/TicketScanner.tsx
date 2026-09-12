@@ -199,7 +199,7 @@ export function TicketScanner() {
               <div key={rsvp.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border-2 border-ink/15 bg-paper">
                 <div className="min-w-0">
                   <p className="font-bold text-sm text-ink truncate">{rsvp.userName}</p>
-                  <p className="stamp text-ink/60">RSVP {new Date(rsvp.createdAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                  <p className="stamp text-ink/60">Mendaftar {new Date(rsvp.createdAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</p>
                 </div>
                 {rsvp.status === 'checked-in' ? (
                   <StatusPill status="checked-in" label="Hadir" />

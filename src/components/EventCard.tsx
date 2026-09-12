@@ -152,7 +152,7 @@ export function EventCard({ event, tilt = 0, index }: EventCardProps) {
                 ? 'Pendaftaran ditutup'
                 : isLive
                   ? 'Ikut sekarang →'
-                  : 'RSVP →'}
+                  : 'Daftar →'}
           </span>
         </div>
       </div>
