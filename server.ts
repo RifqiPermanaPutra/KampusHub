@@ -8,7 +8,8 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // Port bisa ditentukan lingkungan (hosting produksi, atau dev server kedua).
+  const PORT = Number(process.env.PORT) || 3000;
 
   // API middleware
   app.use(express.json());
