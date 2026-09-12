@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI } from '@google/genai';
-
 const API_KEY = process.env.GEMINI_API_KEY;
 
 export const aiService = {
@@ -17,6 +15,8 @@ export const aiService = {
     if (!API_KEY) {
       throw new Error('GEMINI_API_KEY belum dikonfigurasi. Tambahkan ke file .env.local.');
     }
+    // Pustaka Gemini (~200 kB) baru diunduh saat tombol AI ditekan.
+    const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey: API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, MapPin, Tag, FileText, Type, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { aiService } from '../services/aiService';
@@ -13,7 +13,13 @@ import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { EventCard } from '../components/EventCard';
 import { CATEGORIES } from '../constants';
+import { Event } from '../types';
+
+const fieldLabel = 'block text-xs font-bold text-ink uppercase tracking-wider';
+const fieldBox =
+  'w-full rounded-lg bg-white border-2 border-ink px-4 text-sm text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none';
 
 export function CreateEvent() {
   const { profile } = useAuth();
@@ -35,6 +41,7 @@ export function CreateEvent() {
     location: '',
     posterUrl: '',
     capacity: '',
+    rsvpDeadline: '',
   });
 
   useEffect(() => {
@@ -51,6 +58,7 @@ export function CreateEvent() {
               location: event.location,
               posterUrl: event.posterUrl || '',
               capacity: event.capacity?.toString() || '',
+              rsvpDeadline: event.rsvpDeadline || '',
             });
           }
         } catch (err) {
@@ -67,13 +75,14 @@ export function CreateEvent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    
+
     setLoading(true);
     setError('');
     try {
       const eventPayload = {
         ...formData,
         capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
+        rsvpDeadline: formData.rsvpDeadline || undefined,
       };
 
       if (isEditing && id) {
@@ -123,155 +132,214 @@ export function CreateEvent() {
     }
   };
 
+  const handleGenerateDescription = async () => {
+    setAiLoading(true);
+    setError('');
+    try {
+      const description = await aiService.generateEventDescription(
+        formData.title,
+        formData.category,
+        formData.location
+      );
+      setFormData(prev => ({ ...prev, description }));
+    } catch (err: any) {
+      setError(err.message || 'Gagal generate deskripsi dengan AI.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center p-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-campus-blue border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-ink border-t-transparent" />
       </div>
     );
   }
 
+  const deadlineSetelahMulai = Boolean(
+    formData.rsvpDeadline && formData.date && new Date(formData.rsvpDeadline) > new Date(formData.date)
+  );
+
+  // Data tiruan untuk pratinjau kartu poster selama form diisi.
+
+  const capacity = formData.capacity ? parseInt(formData.capacity) : undefined;
+  const previewEvent: Event = {
+    id: 'preview',
+    title: formData.title || 'Judul event',
+    description: formData.description,
+    category: formData.category,
+    date: formData.date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    location: formData.location || 'Lokasi event',
+    posterUrl: formData.posterUrl || undefined,
+    status: 'pending',
+    organizerId: profile?.uid ?? '',
+    organizerName: profile?.name ?? 'Panitia',
+    createdAt: new Date().toISOString(),
+    capacity,
+    attendeeCount: capacity ? 0 : undefined,
+    rsvpDeadline: formData.rsvpDeadline || undefined,
+  };
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-10 text-center">
-        <h2 className="editorial-title text-4xl font-bold text-campus-blue mb-2">
-          {isEditing ? 'Edit Event' : 'Buat Event Baru'}
+    <div className="max-w-5xl mx-auto">
+      <div className="mb-10">
+        <p className="eyebrow mb-2">{isEditing ? 'Ubah poster' : 'Tempel poster baru'}</p>
+        <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
+          {isEditing ? 'Edit Event' : <>Buat event <span className="marker">baru</span></>}
         </h2>
-        <p className="text-gray-500">
-          {isEditing ? 'Update detail event Anda.' : "Bagikan event organisasi Anda dengan komunitas kampus."}
+        <p className="text-ink/70">
+          {isEditing ? 'Update detail event Anda.' : 'Bagikan event organisasi Anda dengan komunitas kampus.'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 space-y-8">
-        <div className="space-y-6">
-          <Input 
-            label="Judul Event" 
-            placeholder="Contoh: Seminar Nasional AI 2024"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            required
-            className="text-lg font-bold"
-          />
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Deskripsi</label>
-              {aiService.isAvailable() && (
-                <button
-                  type="button"
-                  disabled={aiLoading || !formData.title.trim()}
-                  onClick={async () => {
-                    setAiLoading(true);
-                    setError('');
-                    try {
-                      const description = await aiService.generateEventDescription(
-                        formData.title,
-                        formData.category,
-                        formData.location
-                      );
-                      setFormData(prev => ({ ...prev, description }));
-                    } catch (err: any) {
-                      setError(err.message || 'Gagal generate deskripsi dengan AI.');
-                    } finally {
-                      setAiLoading(false);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 text-xs font-bold text-campus-blue hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  title={!formData.title.trim() ? 'Isi judul event dulu' : 'Generate deskripsi dengan AI'}
-                >
-                  <Sparkles size={14} className={aiLoading ? 'animate-pulse' : ''} />
-                  {aiLoading ? 'Menulis...' : 'Generate dengan AI'}
-                </button>
-              )}
-            </div>
-            <textarea
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-10 items-start">
+        <form onSubmit={handleSubmit} className="mading-card p-6 sm:p-10 space-y-8">
+          <div className="space-y-6">
+            <Input
+              label="Judul Event"
+              placeholder="Contoh: Seminar Nasional AI 2026"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
-              placeholder="Beri tahu mahasiswa tentang apa event ini..."
-              className="w-full min-h-[150px] rounded-xl bg-gray-50 border-none px-4 py-3 text-sm ring-1 ring-gray-200 transition-all focus:ring-2 focus:ring-campus-blue focus:bg-white outline-none"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="text-lg font-bold"
             />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Kategori</label>
-              <select
-                className="w-full rounded-xl bg-gray-50 border-none px-4 py-2.5 text-sm ring-1 ring-gray-100 focus:ring-2 focus:ring-campus-blue transition-all outline-none"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-
-            <Input 
-              type="datetime-local" 
-              label="Tanggal & Waktu"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input 
-              label="Lokasi" 
-              placeholder="Contoh: Auditorium Utama"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              required
-            />
-            <Input 
-              label="Kapasitas Peserta (Opsional)" 
-              type="number"
-              placeholder="Kosongkan jika tanpa batas"
-              value={formData.capacity}
-              onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gambar Event / Poster (Optional)</label>
-            <div className="mt-2 flex items-center gap-4">
-              {formData.posterUrl && (
-                 <div className="w-16 h-16 rounded-xl border border-gray-200 overflow-hidden bg-gray-100">
-                   <img src={formData.posterUrl} alt="Preview" className="w-full h-full object-cover" />
-                 </div>
-              )}
-              <div className="flex-1">
-                 <input 
-                   type="file" 
-                   accept="image/*"
-                   onChange={handleImageUpload}
-                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-campus-blue hover:file:bg-blue-100 cursor-pointer"
-                 />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="event-description" className={fieldLabel}>Deskripsi</label>
+                {aiService.isAvailable() && (
+                  <Button
+                    type="button"
+                    variant="stabilo"
+                    size="sm"
+                    disabled={aiLoading || !formData.title.trim()}
+                    onClick={handleGenerateDescription}
+                    title={!formData.title.trim() ? 'Isi judul event dulu' : 'Generate deskripsi dengan AI'}
+                  >
+                    <Sparkles size={14} className={aiLoading ? 'mr-1.5 animate-pulse' : 'mr-1.5'} />
+                    {aiLoading ? 'Menulis...' : 'Generate dengan AI'}
+                  </Button>
+                )}
               </div>
+              <textarea
+                id="event-description"
+                required
+                placeholder="Beri tahu mahasiswa tentang apa event ini..."
+                className={`${fieldBox} min-h-[150px] py-3`}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">Ukuran disarankan: di bawah 1MB. Max: 1MB.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <label htmlFor="event-category" className={fieldLabel}>Kategori</label>
+                <select
+                  id="event-category"
+                  className={`${fieldBox} py-2.5`}
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <Input
+                type="datetime-local"
+                label="Tanggal & Waktu"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Lokasi"
+                placeholder="Contoh: Auditorium Utama"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+              />
+              <Input
+                label="Kapasitas Peserta (Opsional)"
+                type="number"
+                placeholder="Kosongkan jika tanpa batas"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Input
+                label="Batas Waktu Pendaftaran (Opsional)"
+                type="datetime-local"
+                value={formData.rsvpDeadline}
+                max={formData.date || undefined}
+                onChange={(e) => setFormData({ ...formData, rsvpDeadline: e.target.value })}
+              />
+              <p className="text-xs text-ink/60">
+                Setelah lewat batas ini tombol RSVP tertutup otomatis. Kosongkan kalau pendaftaran dibuka sampai hari-H.
+              </p>
+              {deadlineSetelahMulai && (
+                <p className="mading-alert">Batas waktu pendaftaran melewati waktu mulai event. Perbaiki dulu supaya tidak membingungkan peserta.</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="event-poster" className={fieldLabel}>Gambar Event / Poster (Opsional)</label>
+              <div className="mt-2 flex items-center gap-4">
+                {formData.posterUrl && (
+                  <div className="w-16 h-16 rounded-lg border-2 border-ink overflow-hidden bg-white shrink-0">
+                    <img src={formData.posterUrl} alt="Pratinjau poster" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <input
+                  id="event-poster"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="block w-full text-sm text-ink/70 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-2 file:border-ink file:bg-stabilo file:text-sm file:font-bold file:text-ink file:cursor-pointer hover:file:bg-white"
+                />
+              </div>
+              <p className="text-xs text-ink/60 mt-1">Maksimal ±700KB (JPG/PNG). Tanpa gambar, poster dibuat otomatis dari warna kategori.</p>
+            </div>
           </div>
-        </div>
 
-        {error && <p className="text-sm text-red-500 font-medium text-center">{error}</p>}
+          {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 
-        <div className="flex gap-4 pt-6">
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="flex-1"
-            onClick={() => navigate(-1)}
-          >
-            Batal
-          </Button>
-          <Button 
-            type="submit" 
-            className="flex-1"
-            loading={loading}
-          >
-            {isEditing ? 'Simpan Perubahan' : 'Ajukan untuk Persetujuan'}
-          </Button>
-        </div>
-      </form>
+          <div className="flex gap-4 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => navigate(-1)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1"
+              loading={loading}
+              disabled={deadlineSetelahMulai}
+            >
+              {isEditing ? 'Simpan Perubahan' : 'Ajukan untuk Persetujuan'}
+            </Button>
+          </div>
+        </form>
+
+        {/* Pratinjau poster: tampilan kartu di mading setelah disetujui */}
+        <aside className="lg:sticky lg:top-2 space-y-4">
+          <p className="eyebrow">Pratinjau di mading</p>
+          <div inert className="pointer-events-none select-none">
+            <EventCard event={previewEvent} tilt={-1.5} />
+          </div>
+          <p className="text-xs text-ink/60">
+            Poster tampil untuk mahasiswa setelah disetujui admin.
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }

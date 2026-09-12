@@ -10,8 +10,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { rsvpService } from '../services/rsvpService';
 import { Event, RSVP } from '../types';
-import { ArrowLeft, CheckCircle, AlertCircle, ScanLine } from 'lucide-react';
+import { CheckCircle, AlertCircle, ScanLine } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { BackButton } from '../components/ui/BackButton';
+import { StatusPill } from '../components/ui/StatusPill';
+import { PhaseTag } from '../components/ui/PhaseTag';
+import { getEventPhase } from '../lib/event-phase';
 import { usePageTitle } from '../lib/usePageTitle';
 
 export function TicketScanner() {
@@ -105,72 +109,102 @@ export function TicketScanner() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-campus-blue border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-ink border-t-transparent" />
       </div>
     );
   }
 
   if (!event) return null;
 
+  const phase = getEventPhase(event.date);
+  const attendees = rsvps.filter(r => r.status !== 'waitlist');
+  const checkedInCount = rsvps.filter(r => r.status === 'checked-in').length;
+  const progress = attendees.length ? (checkedInCount / attendees.length) * 100 : 0;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-50">
-          <ArrowLeft size={24} className="text-gray-600" />
-        </button>
-        <div>
-          <h2 className="editorial-title text-4xl font-bold text-campus-blue">Scanner Tiket</h2>
-          <p className="text-gray-500 font-medium">{event.title}</p>
+    <div className="max-w-5xl mx-auto space-y-8">
+      <div className="flex items-center gap-4 border-b-2 border-ink pb-6">
+        <BackButton onClick={() => navigate(-1)} />
+        <div className="min-w-0">
+          <p className="eyebrow mb-1 truncate">{event.title}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="editorial-title text-4xl text-ink">Scanner Tiket</h2>
+            <PhaseTag phase={phase} />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-4 text-gray-900 font-bold">
-              <ScanLine size={20} className="text-campus-blue" />
-              Scan QR Code
-            </div>
-            
-            <div id="reader" className="w-full rounded-2xl overflow-hidden border border-gray-100"></div>
-
-            {scanResult && (
-              <div className={`mt-6 p-4 rounded-xl flex items-center gap-3 font-medium ${
-                scanResult.status === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-              }`}>
-                {scanResult.status === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
-                {scanResult.message}
-              </div>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="mading-card p-6 space-y-5">
+          <div className="flex items-center gap-2 text-ink font-bold">
+            <ScanLine size={20} />
+            Scan QR Code
           </div>
-        </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-[600px]">
-          <h3 className="font-bold text-lg mb-4 text-gray-900">Daftar Kehadiran ({rsvps.filter(r => r.status === 'checked-in').length}/{rsvps.filter(r => r.status !== 'waitlist').length})</h3>
-          <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-            {rsvps.filter(r => r.status !== 'waitlist').map(rsvp => (
-              <div key={rsvp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div>
-                  <p className="font-bold text-sm text-gray-900">{rsvp.userName}</p>
-                  <p className="text-[10px] text-gray-500">{new Date(rsvp.createdAt).toLocaleString('id-ID')}</p>
+          {phase === 'upcoming' && (
+            <div className="mading-note">
+              Event belum mulai. Anda tetap bisa check-in lebih awal kalau peserta sudah datang.
+            </div>
+          )}
+          {phase === 'past' && (
+            <div className="rounded-lg border-2 border-ink bg-ink p-3 text-sm font-semibold text-white">
+              Event sudah selesai. Check-in susulan masih tercatat, tapi periksa lagi keabsahannya.
+            </div>
+          )}
+
+          {/* Bingkai scanner tebal dengan sudut stabilo */}
+          <div className="relative rounded-lg border-2 border-ink bg-paper p-2">
+            <span className="absolute -left-1.5 -top-1.5 w-6 h-6 border-l-4 border-t-4 border-stabilo rounded-tl-md" aria-hidden="true" />
+            <span className="absolute -right-1.5 -top-1.5 w-6 h-6 border-r-4 border-t-4 border-stabilo rounded-tr-md" aria-hidden="true" />
+            <span className="absolute -left-1.5 -bottom-1.5 w-6 h-6 border-l-4 border-b-4 border-stabilo rounded-bl-md" aria-hidden="true" />
+            <span className="absolute -right-1.5 -bottom-1.5 w-6 h-6 border-r-4 border-b-4 border-stabilo rounded-br-md" aria-hidden="true" />
+            <div id="reader" className="w-full rounded-md overflow-hidden"></div>
+          </div>
+
+          {scanResult && (
+            <div
+              role="status"
+              className={`p-4 rounded-lg border-2 border-ink flex items-center gap-3 font-bold text-ink ${
+                scanResult.status === 'success' ? 'bg-daun' : 'bg-spidol'
+              }`}
+            >
+              {scanResult.status === 'success' ? <CheckCircle size={24} className="shrink-0" /> : <AlertCircle size={24} className="shrink-0" />}
+              {scanResult.message}
+            </div>
+          )}
+        </section>
+
+        <section className="mading-card p-6 flex flex-col h-[600px]">
+          <div className="space-y-3 mb-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="font-editorial font-extrabold text-xl text-ink">Daftar Kehadiran</h3>
+              <span className="stamp text-ink tabular-nums">{checkedInCount}/{attendees.length} hadir</span>
+            </div>
+            <div className="h-3 rounded-md border-2 border-ink bg-white overflow-hidden" aria-hidden="true">
+              <div className={`h-full bg-daun ${progress > 0 ? 'border-r-2 border-ink' : ''}`} style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-1 space-y-2.5">
+            {attendees.map(rsvp => (
+              <div key={rsvp.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border-2 border-ink/15 bg-paper">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm text-ink truncate">{rsvp.userName}</p>
+                  <p className="stamp text-ink/60">RSVP {new Date(rsvp.createdAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</p>
                 </div>
                 {rsvp.status === 'checked-in' ? (
-                  <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                    <CheckCircle size={12} />
-                    Hadir
-                  </span>
+                  <StatusPill status="checked-in" label="Hadir" />
                 ) : (
-                  <Button size="sm" variant="outline" onClick={() => handleManualCheckIn(rsvp.id)}>
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleManualCheckIn(rsvp.id)}>
                     Manual Check-in
                   </Button>
                 )}
               </div>
             ))}
             {rsvps.length === 0 && (
-              <p className="text-center text-gray-500 text-sm mt-10">Belum ada peserta.</p>
+              <p className="text-center text-ink/60 text-sm mt-10">Belum ada peserta.</p>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

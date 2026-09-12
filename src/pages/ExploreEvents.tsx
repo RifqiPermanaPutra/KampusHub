@@ -5,23 +5,47 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { motion } from 'motion/react';
 import { eventService } from '../services/eventService';
 import { Event } from '../types';
-import { EventCard } from '../components/EventCard';
+import { EventCard, wallTilt } from '../components/EventCard';
+import { Button } from '../components/ui/Button';
 import { CATEGORIES } from '../constants';
 import { Search } from 'lucide-react';
+import { EventPhase, getEventPhase } from '../lib/event-phase';
 import { cn } from '../lib/utils';
 import { usePageTitle } from '../lib/usePageTitle';
 import { EventGridSkeleton } from '../components/ui/Skeleton';
+
+const ALL_CATEGORY = 'Semua Event';
+
+type PhaseFilter = 'semua' | 'live' | 'akan' | 'selesai';
+
+const PHASE_FILTERS: { key: PhaseFilter; label: string; activeClass: string }[] = [
+  { key: 'semua', label: 'Semua waktu', activeClass: 'bg-ink text-white' },
+  { key: 'live', label: 'Sedang berlangsung', activeClass: 'bg-spidol text-ink' },
+  { key: 'akan', label: 'Akan datang', activeClass: 'bg-stabilo text-ink' },
+  { key: 'selesai', label: 'Sudah selesai', activeClass: 'bg-ink text-white' },
+];
+
+function matchesPhase(phase: EventPhase, filter: PhaseFilter) {
+  if (filter === 'semua') return true;
+  if (filter === 'live') return phase === 'live';
+  if (filter === 'akan') return phase === 'upcoming' || phase === 'soon';
+  return phase === 'past';
+}
+
+// Urutan tampil: yang sedang berlangsung dulu, lalu yang akan datang, terakhir yang selesai.
+const PHASE_ORDER: Record<EventPhase, number> = { live: 0, soon: 1, upcoming: 2, past: 3 };
 
 export function ExploreEvents() {
   usePageTitle('Jelajahi Event');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState('Semua Event');
+  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORY);
+  const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>('semua');
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [tick, setTick] = useState(0);
+
   const location = useLocation();
 
   useEffect(() => {
@@ -38,88 +62,156 @@ export function ExploreEvents() {
     loadEvents();
   }, [location.search]);
 
+  // Fase event ikut berubah tanpa reload halaman.
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   const filteredEvents = useMemo(() => {
-    return events.filter(e => {
-      const matchesCategory = categoryFilter === 'Semua Event' || e.category === categoryFilter;
-      const term = searchQuery.toLowerCase();
-      const matchesSearch = term === '' || 
-        e.title.toLowerCase().includes(term) || 
-        e.description.toLowerCase().includes(term) ||
-        e.location.toLowerCase().includes(term);
-      return matchesCategory && matchesSearch;
-    });
-  }, [events, categoryFilter, searchQuery]);
+    const term = searchQuery.toLowerCase();
+    return events
+      .filter(e => {
+        const matchesCategory = categoryFilter === ALL_CATEGORY || e.category === categoryFilter;
+        const matchesSearch = term === '' ||
+          e.title.toLowerCase().includes(term) ||
+          e.description.toLowerCase().includes(term) ||
+          e.location.toLowerCase().includes(term);
+        return matchesCategory && matchesSearch && matchesPhase(getEventPhase(e.date), phaseFilter);
+      })
+      .sort((a, b) => {
+        const phaseA = getEventPhase(a.date);
+        const phaseB = getEventPhase(b.date);
+        if (PHASE_ORDER[phaseA] !== PHASE_ORDER[phaseB]) {
+          return PHASE_ORDER[phaseA] - PHASE_ORDER[phaseB];
+        }
+        const ta = new Date(a.date).getTime();
+        const tb = new Date(b.date).getTime();
+        // Yang sudah selesai: paling baru dulu. Sisanya: paling dekat dulu.
+        return phaseA === 'past' ? tb - ta : ta - tb;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, categoryFilter, phaseFilter, searchQuery, tick]);
+
+  const liveCount = useMemo(
+    () => events.filter(e => getEventPhase(e.date) === 'live').length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [events, tick]
+  );
 
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto space-y-12">
-        <div className="h-12 w-72 max-w-full animate-pulse bg-gray-200/70 rounded-xl" />
+        <div className="h-12 w-72 max-w-full rounded-lg shimmer" />
         <EventGridSkeleton count={8} />
       </div>
     );
   }
 
+  const resetFilters = () => {
+    setCategoryFilter(ALL_CATEGORY);
+    setPhaseFilter('semua');
+    setSearchQuery('');
+  };
+
   return (
-    <div className="max-w-6xl mx-auto space-y-12">
-      <div className="flex flex-col gap-6 md:flex-row md:items-end justify-between border-b border-gray-100 pb-8">
+    <div className="max-w-6xl mx-auto space-y-10">
+      <div className="flex flex-col gap-6 md:flex-row md:items-end justify-between border-b-2 border-ink pb-8">
         <div>
-          <h2 className="editorial-title text-3xl sm:text-5xl font-bold text-campus-blue mb-2">
-            Jelajahi Event
+          <p className="eyebrow mb-2">
+            {filteredEvents.length} event ditempel
+            {liveCount > 0 && <span className="text-ink"> · {liveCount} sedang berlangsung</span>}
+          </p>
+          <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
+            Jelajahi <span className="marker marker-draw">event</span>
           </h2>
-          <p className="text-gray-500 font-medium">Temukan apa yang sedang terjadi di sekitar kampus.</p>
+          <p className="text-ink/70 font-medium">Temukan apa yang sedang terjadi di sekitar kampus.</p>
         </div>
 
         <div className="relative w-full md:w-96">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-ink/60">
             <Search size={18} />
           </span>
-          <input 
-            type="text" 
-            placeholder="Cari event..." 
+          <input
+            type="text"
+            placeholder="Cari judul, lokasi, atau kata kunci"
+            aria-label="Cari event"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-sm ring-1 ring-transparent focus:ring-2 focus:border-transparent focus:ring-campus-blue transition-all outline-none shadow-sm"
+            className="w-full pl-10 pr-4 py-3 bg-white border-2 border-ink rounded-lg text-sm text-ink placeholder:text-ink/45 transition-shadow outline-none focus:shadow-sticker motion-reduce:transition-none"
           />
         </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
-        {['Semua Event', ...CATEGORIES].map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategoryFilter(cat)}
-            className={cn(
-              'px-6 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap',
-              categoryFilter === cat 
-                ? 'bg-campus-blue text-white shadow-lg shadow-blue-900/20' 
-                : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100 shadow-sm'
-            )}
-          >
-            {cat}
-          </button>
-        ))}
+      <div className="space-y-3">
+        <div className="flex gap-2 overflow-x-auto p-1 -m-1 pb-1 scrollbar-none" role="group" aria-label="Filter waktu">
+          {PHASE_FILTERS.map(({ key, label, activeClass }) => {
+            const active = phaseFilter === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setPhaseFilter(key)}
+                aria-pressed={active}
+                className={cn(
+                  'flex items-center gap-2 whitespace-nowrap rounded-full border-2 border-ink px-4 py-1.5 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                  active ? activeClass : 'bg-white text-ink hover:bg-stabilo'
+                )}
+              >
+                {key === 'live' && (
+                  <span
+                    className={cn(
+                      'w-2 h-2 rounded-full border border-ink bg-spidol',
+                      active && 'bg-ink live-dot'
+                    )}
+                    aria-hidden="true"
+                  />
+                )}
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto p-1 -m-1 pb-2 scrollbar-none" role="group" aria-label="Filter kategori">
+          {[ALL_CATEGORY, ...CATEGORIES].map((cat) => {
+            const active = categoryFilter === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                aria-pressed={active}
+                className={cn(
+                  'whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                  active
+                    ? 'border-ink bg-ink text-white'
+                    : 'border-ink/30 bg-white text-ink hover:border-ink hover:bg-stabilo'
+                )}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {filteredEvents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-10 pt-2">
           {filteredEvents.map((event, index) => (
-            <motion.div
-              key={event.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: Math.min(index * 0.05, 0.5) }}
-            >
-              <EventCard event={event} />
-            </motion.div>
+            <EventCard key={event.id} event={event} tilt={wallTilt(index)} index={index} />
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-3xl p-20 text-center border border-dashed border-gray-200">
-          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300 mb-4">
-            <Search size={24} />
+        <div className="mading-card p-12 text-center max-w-xl mx-auto space-y-4">
+          <div className="w-14 h-14 rounded-lg border-2 border-ink bg-stabilo flex items-center justify-center mx-auto -rotate-6 shadow-sticker">
+            <Search size={22} className="text-ink" />
           </div>
-          <h3 className="editorial-title text-2xl font-bold text-gray-900 mb-2">Tidak ada event ditemukan</h3>
-          <p className="text-gray-400 font-medium max-w-sm mx-auto">Kami tidak dapat menemukan event yang sesuai dengan pencarian atau filter kategori Anda.</p>
+          <h3 className="editorial-title text-2xl text-ink">Tidak ada event yang cocok</h3>
+          <p className="text-ink/70 font-medium max-w-sm mx-auto">
+            Coba kata kunci lain atau hapus filter untuk melihat semua event.
+          </p>
+          <Button variant="stabilo" onClick={resetFilters}>
+            Hapus pencarian dan filter
+          </Button>
         </div>
       )}
     </div>

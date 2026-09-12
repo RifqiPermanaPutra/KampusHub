@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" role="img" aria-label="Nametag mahasiswa baru, A4 horizontal">
+  <title>Nametag Mahasiswa Baru</title>
+
+  <defs>
+    <!-- Kertas kotak-kotak khas buku tulis -->
+    <pattern id="kertas" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M6 0H0V6" fill="none" stroke="#121212" stroke-opacity="0.06" stroke-width="0.3"/>
+    </pattern>
+    <clipPath id="dalamKartu">
+      <rect x="8" y="8" width="281" height="194" rx="5"/>
+    </clipPath>
+  </defs>
+
+  <!-- Latar halaman -->
+  <rect width="297" height="210" fill="#FAFAF7"/>
+
+  <!-- Bayangan offset ala stiker -->
+  <rect x="11" y="11" width="281" height="194" rx="5" fill="#121212"/>
+
+  <!-- Badan kartu -->
+  <rect x="8" y="8" width="281" height="194" rx="5" fill="#FFFFFF" stroke="#121212" stroke-width="1.6"/>
+  <rect x="8" y="8" width="281" height="194" rx="5" fill="url(#kertas)"/>
+
+  <g clip-path="url(#dalamKartu)">
+    <!-- Ornamen lingkaran ala poster sablon -->
+    <circle cx="276" cy="196" r="42" fill="none" stroke="#121212" stroke-opacity="0.12" stroke-width="1.4"/>
+    <circle cx="24" cy="198" r="26" fill="none" stroke="#FFE14D" stroke-width="2.4"/>
+  </g>
+
+  <!-- Kepala: logo, penanda lubang tali, stiker ospek -->
+  <!-- Tempat logo kampus/fakultas: ganti kotak ini dengan logo Anda -->
+  <rect x="22" y="14" width="46" height="18" rx="3" fill="none" stroke="#121212" stroke-opacity="0.45" stroke-width="1" stroke-dasharray="3 2"/>
+  <text x="45" y="25" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="4" letter-spacing="0.5" fill="#121212" fill-opacity="0.5">LOGO KAMPUS</text>
+
+  <circle cx="148.5" cy="21" r="4.5" fill="none" stroke="#121212" stroke-opacity="0.45" stroke-width="0.9" stroke-dasharray="1.6 1.6"/>
+  <text x="148.5" y="31.5" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="3.2" letter-spacing="0.4" fill="#121212" fill-opacity="0.5">LUBANG TALI</text>
+
+  <g transform="rotate(2 236 23)">
+    <rect x="196" y="15.5" width="80" height="15" rx="3" fill="#FF4F3A" stroke="#121212" stroke-width="1.4"/>
+    <text x="236" y="26" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="6" font-weight="600" letter-spacing="0.6" fill="#121212">MAHASISWA BARU</text>
+  </g>
+
+  <line x1="22" y1="44" x2="275" y2="44" stroke="#121212" stroke-width="1.2"/>
+
+  <!-- Kotak foto 3:4 -->
+  <rect x="22" y="54" width="72" height="96" rx="3" fill="#FFFFFF" stroke="#121212" stroke-width="1.4"/>
+  <g transform="rotate(-4 34 54)">
+    <rect x="22" y="50" width="24" height="8" fill="#FFE14D" fill-opacity="0.85" stroke="#121212" stroke-opacity="0.25" stroke-width="0.5"/>
+  </g>
+  <g transform="rotate(-4 82 150)">
+    <rect x="70" y="146" width="24" height="8" fill="#FFE14D" fill-opacity="0.85" stroke="#121212" stroke-opacity="0.25" stroke-width="0.5"/>
+  </g>
+  <text x="58" y="98" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="5" letter-spacing="0.6" fill="#121212" fill-opacity="0.45">TEMPEL</text>
+  <text x="58" y="107" text-anchor="middle" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="5" letter-spacing="0.6" fill="#121212" fill-opacity="0.45">FOTO 3 × 4</text>
+
+  <!-- Kolom data -->
+  <text x="106" y="62" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="4.2" font-weight="600" letter-spacing="0.8" fill="#121212" fill-opacity="0.7">NAMA LENGKAP</text>
+  <!-- Sapuan stabilo dibuat selebar kolom supaya rapi untuk nama sepanjang apa pun -->
+  <rect x="104" y="68" width="173" height="12" fill="#FFE14D"/>
+  <text x="106" y="79" font-family="'Bricolage Grotesque', 'Arial Black', Arial, sans-serif" font-size="12" font-weight="800" fill="#121212">NADIA RAHMA PUTRI</text>
+
+  <text x="106" y="100" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="4.2" font-weight="600" letter-spacing="0.8" fill="#121212" fill-opacity="0.7">TEMPAT, TANGGAL LAHIR</text>
+  <text x="106" y="112" font-family="Onest, Arial, sans-serif" font-size="7.5" font-weight="600" fill="#121212">Bandung, 12 Maret 2008</text>
+  <line x1="106" y1="116" x2="275" y2="116" stroke="#121212" stroke-opacity="0.2" stroke-width="0.8"/>
+
+  <text x="106" y="130" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="4.2" font-weight="600" letter-spacing="0.8" fill="#121212" fill-opacity="0.7">JURUSAN</text>
+  <text x="106" y="142" font-family="Onest, Arial, sans-serif" font-size="7.5" font-weight="600" fill="#121212">Teknik Informatika</text>
+  <line x1="106" y1="146" x2="275" y2="146" stroke="#121212" stroke-opacity="0.2" stroke-width="0.8"/>
+
+  <text x="106" y="160" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="4.2" font-weight="600" letter-spacing="0.8" fill="#121212" fill-opacity="0.7">ASAL SEKOLAH</text>
+  <text x="106" y="172" font-family="Onest, Arial, sans-serif" font-size="7.5" font-weight="600" fill="#121212">SMA Negeri 3 Bandung</text>
+  <line x1="106" y1="176" x2="275" y2="176" stroke="#121212" stroke-opacity="0.2" stroke-width="0.8"/>
+
+  <!-- Kaki -->
+  <text x="22" y="190" font-family="'IBM Plex Mono', 'Courier New', monospace" font-size="3.6" letter-spacing="0.5" fill="#121212" fill-opacity="0.5">NAMETAG MAHASISWA BARU · CETAK A4 HORIZONTAL 100%</text>
+</svg>

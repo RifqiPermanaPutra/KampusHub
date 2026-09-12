@@ -12,6 +12,8 @@ import { auth, db } from '../lib/firebase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { UserRole } from '../types';
+import { AuthShell, AuthDivider } from '../components/AuthShell';
+import { RoleToggle } from '../components/RoleToggle';
 
 export function Register() {
   usePageTitle('Daftar');
@@ -137,26 +139,12 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-main p-4">
-      <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-campus-blue rounded-2xl text-white text-3xl font-black mb-6 shadow-xl shadow-blue-900/20">K</div>
-          <h2 className="editorial-title text-4xl font-bold text-campus-blue">Daftar KampusHub</h2>
-          <p className="text-gray-500 mt-2 text-sm">Mulai jelajahi kehidupan kampus hari ini</p>
-        </div>
-
+    <AuthShell
+      title={<>Daftar <span className="marker">KampusHub</span></>}
+      subtitle="Mulai jelajahi kehidupan kampus hari ini"
+    >
         <form onSubmit={handleRegister} className="space-y-6">
-          <div className="space-y-2 flex flex-col">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tipe Akun</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              className="w-full py-3 px-4 rounded-xl border-2 border-gray-100 bg-white text-sm font-medium focus:border-campus-blue focus:ring-4 focus:ring-blue-900/5 outline-none transition-all text-gray-700"
-            >
-              <option value="mahasiswa">Mahasiswa / User</option>
-              <option value="panitia">Panitia Event</option>
-            </select>
-          </div>
+          <RoleToggle value={role} onChange={setRole} />
 
           <Input 
             label="Nama Lengkap" 
@@ -242,26 +230,19 @@ export function Register() {
             </>
           )}
           
-          {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+          {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 
           <Button type="submit" className="w-full py-4 text-lg" loading={loading}>
             Buat Akun
           </Button>
         </form>
 
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Atau lanjutkan dengan</span>
-          </div>
-        </div>
+        <AuthDivider />
 
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full py-4 text-lg border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-3"
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full py-4 text-lg flex items-center justify-center gap-3"
           onClick={handleGoogleSignIn}
           disabled={loading}
         >
@@ -287,13 +268,12 @@ export function Register() {
           Google
         </Button>
 
-        <p className="text-center text-sm text-gray-500 pt-4">
+        <p className="text-center text-sm text-ink/70">
           Sudah punya akun?{' '}
-          <Link to="/login" className="font-bold text-campus-blue hover:underline">
+          <Link to="/login" className="font-extrabold text-pulpen hover:underline">
             Masuk
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

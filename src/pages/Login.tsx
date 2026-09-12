@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePageTitle } from '../lib/usePageTitle';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -11,6 +11,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { AuthShell, AuthDivider } from '../components/AuthShell';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Login() {
   usePageTitle('Masuk');
@@ -18,7 +20,14 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
+
+  // Kalau status login baru diketahui belakangan (mis. jaringan lambat),
+  // jangan biarkan pengguna yang sudah masuk terjebak di halaman ini.
+  useEffect(() => {
+    if (user && profile) navigate('/', { replace: true });
+  }, [user, profile, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,14 +80,10 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-main p-4">
-      <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-3xl shadow-xl shadow-blue-900/5 border border-gray-100">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-campus-blue rounded-2xl text-white text-3xl font-black mb-6 shadow-xl shadow-blue-900/20">K</div>
-          <h2 className="editorial-title text-4xl font-bold text-campus-blue">Selamat Datang Kembali</h2>
-          <p className="text-gray-500 mt-2 text-sm">Masuk ke akun KampusHub Anda</p>
-        </div>
-
+    <AuthShell
+      title={<>Selamat datang <span className="marker">kembali</span></>}
+      subtitle="Masuk ke akun KampusHub Anda"
+    >
         <form onSubmit={handleLogin} className="space-y-6">
           <Input 
             label="Alamat Email" 
@@ -97,26 +102,19 @@ export function Login() {
             required
           />
           
-          {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+          {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 
           <Button type="submit" className="w-full py-4 text-lg" loading={loading}>
             Masuk
           </Button>
         </form>
 
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Atau lanjutkan dengan</span>
-          </div>
-        </div>
+        <AuthDivider />
 
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="w-full py-4 text-lg border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-3"
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full py-4 text-lg flex items-center justify-center gap-3"
           onClick={handleGoogleSignIn}
           disabled={loading}
         >
@@ -142,13 +140,12 @@ export function Login() {
           Google
         </Button>
 
-        <p className="text-center text-sm text-gray-500 pt-4">
+        <p className="text-center text-sm text-ink/70">
           Belum punya akun?{' '}
-          <Link to="/register" className="font-bold text-campus-blue hover:underline">
+          <Link to="/register" className="font-extrabold text-pulpen hover:underline">
             Daftar gratis
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   );
 }
