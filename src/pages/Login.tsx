@@ -6,9 +6,7 @@
 import { useEffect, useState } from 'react';
 import { usePageTitle } from '../lib/usePageTitle';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { authService } from '../services/authService';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { AuthShell, AuthDivider } from '../components/AuthShell';
@@ -34,14 +32,10 @@ export function Login() {
     setLoading(true);
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await authService.signIn(email, password);
       navigate('/');
-    } catch (err: any) {
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Email atau kata sandi salah. Silakan periksa kembali.');
-      } else {
-        setError('Gagal masuk: ' + err.message);
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal masuk.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -52,29 +46,12 @@ export function Login() {
     setLoading(true);
     setError('');
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const user = userCredential.user;
-      
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          name: user.displayName || 'Unknown',
-          email: user.email,
-          role: 'mahasiswa',
-          createdAt: new Date().toISOString()
-        });
-      }
-      navigate('/');
-    } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user') {
-        // User closed the popup, ignore
-      } else {
-        setError('Gagal masuk dengan Google.');
-      }
+      // Memindahkan browser ke halaman Google. Kalau berhasil, baris sesudahnya
+      // tidak sempat berjalan karena halaman sudah berganti.
+      await authService.signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal masuk dengan Google.');
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };

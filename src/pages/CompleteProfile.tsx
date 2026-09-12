@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { profileService } from '../services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -20,7 +19,8 @@ export function CompleteProfile() {
 
   useEffect(() => {
     if (user) {
-      setName(user.displayName || '');
+      // Google mengirim nama lengkap lewat user_metadata; pendaftar email tidak punya.
+      setName((user.user_metadata?.full_name as string | undefined) ?? '');
     }
   }, [user]);
 
@@ -39,20 +39,22 @@ export function CompleteProfile() {
     setError('');
     
     try {
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        name: name || user.displayName || 'New User',
-        email: user.email,
-        role: role,
-        createdAt: new Date().toISOString()
+      await profileService.createProfile({
+        uid: user.id,
+        // Pengguna yang masuk lewat Google membawa nama dari akunnya; yang
+        // mendaftar dengan email belum tentu, jadi tetap ada nilai cadangan.
+        name: name || (user.user_metadata?.full_name as string | undefined) || 'Pengguna Baru',
+        email: user.email ?? '',
+        role,
+        createdAt: new Date().toISOString(),
       });
-      
-      // Reload profile in AuthContext
+
+      // Muat ulang profil di AuthContext
       await reloadProfile();
-      
+
       navigate('/', { replace: true });
-    } catch (err: any) {
-      setError('Gagal melengkapi profile. Silakan coba lagi.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal melengkapi profil. Silakan coba lagi.');
       console.error(err);
     } finally {
       setLoading(false);

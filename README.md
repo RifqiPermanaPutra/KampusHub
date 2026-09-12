@@ -11,34 +11,55 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 ## Tech Stack
 - Frontend: React 19, TypeScript, React Router, Vite
 - Styling: Tailwind CSS v4, Framer Motion
-- Backend & Database: Firebase Authentication & Cloud Firestore
+- Backend & Database: Supabase (PostgreSQL, Auth, Row Level Security, Realtime)
 - Utilities: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
 
 ## Cara Menjalankan (Run Locally)
 
-1. Pastikan Anda telah menginstal Node.js
+1. Pastikan Anda telah menginstal Node.js.
 2. Install semua dependensi:
    ```bash
    npm install
    ```
-3. Jalankan *development server*:
+3. Siapkan database (lihat bagian berikutnya), lalu salin `.env.example` jadi
+   `.env.local` dan isi `VITE_SUPABASE_URL` serta `VITE_SUPABASE_ANON_KEY`.
+4. Jalankan *development server*:
    ```bash
    npm run dev
    ```
-4. Buka browser dan akses `http://localhost:3000`
+5. Buka browser dan akses `http://localhost:3000`.
 
-## Aturan Firestore (wajib dipublikasikan)
+## Menyiapkan Supabase (sekali saja)
 
-Beberapa fitur menulis ke Firestore lewat transaksi, jadi `firestore.rules` di repo ini
-harus dipublikasikan ke project Firebase sebelum aplikasi dipakai:
+1. Buat project baru di [supabase.com](https://supabase.com).
+2. Buka **SQL Editor**, lalu jalankan berkas di `supabase/migrations/` **berurutan**:
+   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql`.
+3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.
+4. Untuk login Google: daftarkan OAuth client di Google Cloud Console, lalu isi
+   Client ID dan Secret di **Authentication → Providers → Google**.
+5. Daftarkan akun pertama lewat form aplikasi. Untuk menjadikannya admin, jalankan di SQL Editor:
+   ```sql
+   update public.profiles set role = 'admin' where email = 'email-anda@kampus.ac.id';
+   ```
+6. Opsional, isi data demo: jalankan `05_seed.sql` setelah akun pertama terdaftar.
 
-1. Buka Firebase Console → **Firestore Database** → tab **Rules**.
-2. Tempel seluruh isi [`firestore.rules`](firestore.rules).
-3. Klik **Publish**.
+> Saat demo, matikan **Authentication → Providers → Email → Confirm email** supaya
+> akun uji bisa langsung dipakai tanpa menunggu email konfirmasi.
 
-Tanpa langkah ini, RSVP akan gagal ("Missing or insufficient permissions") karena
-transaksi RSVP memperbarui counter `attendeeCount` di dokumen event, dan check-in
-gagal memperbarui status di subkoleksi `events/{id}/rsvps`.
+## Catatan Arsitektur
+
+Aplikasi ini sebelumnya berjalan di Cloud Firestore. Perpindahan ke Postgres dilakukan
+karena tiga keterbatasan yang tercatat berasal dari model datanya, bukan dari kodenya:
+
+| Sebelumnya | Sekarang |
+|---|---|
+| Jumlah peserta disimpan sebagai field, dan aturan keamanan terpaksa mengizinkan pengguna mana pun menggesernya ±1 | Dihitung `count(*)` lewat view `events_with_counts`; tidak ada yang perlu dilonggarkan |
+| Dashboard admin mengunduh seluruh koleksi `rsvps` untuk menjumlahkannya di browser | Fungsi `campus_analytics()` menjumlahkan di database; yang dikirim hanya hasilnya |
+| RSVP ditulis ganda ke dua koleksi dan bisa berbeda status | Satu tabel dengan kunci `(event_id, user_id)` |
+
+Kuota, daftar tunggu, batas waktu pendaftaran, dan syarat "hanya peserta hadir yang boleh
+mengulas" sekarang ditegakkan di server lewat fungsi `plpgsql` dan policy RLS — sebelumnya
+sebagian hanya diperiksa di browser.
 
 ## Fitur Tambahan
 

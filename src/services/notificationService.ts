@@ -1,79 +1,97 @@
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { handleFirestoreError, OperationType } from '../lib/error-handler';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { supabase } from '../lib/supabase';
+import { logDbError, OperationType } from '../lib/error-handler';
+import { NotificationRow, rowToNotification } from '../lib/mappers';
 import { Notification } from '../types';
 
+const TABLE = 'notifications';
+
 export const notificationService = {
-  async getNotifications(userId: string) {
+  async getNotifications(userId: string): Promise<Notification[]> {
     try {
-      const path = `users/${userId}/notifications`;
-      const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as NotificationRow[]).map(rowToNotification);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'notifications');
+      logDbError(error, OperationType.LIST, TABLE);
       return [];
     }
   },
 
-  async sendNotification(notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) {
+  /**
+   * `dedupeKey` untuk notifikasi yang tidak boleh dobel, misalnya pengingat H-1
+   * yang diperiksa ulang setiap kali aplikasi dibuka. Indeks unik di database
+   * yang menjamin keunikannya, jadi dua tab yang terbuka bersamaan pun aman.
+   *
+   * Notifikasi bersifat pelengkap, jadi kegagalannya dicatat tanpa dilempar:
+   * RSVP yang sudah berhasil tidak boleh terlihat gagal hanya karena
+   * pemberitahuannya tidak terkirim.
+   */
+  async sendNotification(
+    notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>,
+    dedupeKey?: string
+  ): Promise<void> {
     try {
-      const path = `users/${notification.userId}/notifications`;
-      await addDoc(collection(db, path), {
-        ...notification,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+      const { error } = await supabase.from(TABLE).insert({
+        user_id: notification.userId,
+        event_id: notification.eventId || null,
+        message: notification.message,
+        dedupe_key: dedupeKey ?? null,
       });
+      // 23505 = indeks dedupe menolak kiriman kedua. Itu memang yang diinginkan.
+      if (error && error.code !== '23505') throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'notifications');
+      logDbError(error, OperationType.CREATE, TABLE);
     }
   },
 
-  async markAsRead(userId: string, notificationId: string) {
+  async markAsRead(userId: string, notificationId: string): Promise<void> {
     try {
-      const docRef = doc(db, `users/${userId}/notifications`, notificationId);
-      await updateDoc(docRef, { isRead: true });
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .eq('user_id', userId);
+      if (error) throw error;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      logDbError(error, OperationType.UPDATE, TABLE);
     }
   },
 
-  async markAllAsRead(userId: string) {
+  async markAllAsRead(userId: string): Promise<void> {
     try {
-      const path = `users/${userId}/notifications`;
-      const q = query(collection(db, path), where('isRead', '==', false));
-      const snapshot = await getDocs(q);
-      
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((document) => {
-        batch.update(doc(db, path, document.id), { isRead: true });
-      });
-      await batch.commit();
+      // Satu pernyataan UPDATE, bukan batch per dokumen seperti sebelumnya.
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+      if (error) throw error;
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      logDbError(error, OperationType.UPDATE, TABLE);
     }
   },
 
   subscribe(userId: string, callback: (notifications: Notification[]) => void) {
-    const path = `users/${userId}/notifications`;
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-    
-    return onSnapshot(q, (snapshot) => {
-      const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-      callback(notifications);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, path);
-    });
-  }
+    void this.getNotifications(userId).then(callback);
+
+    const channel = supabase
+      .channel(`notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: TABLE, filter: `user_id=eq.${userId}` },
+        () => { void this.getNotifications(userId).then(callback); }
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+  },
 };

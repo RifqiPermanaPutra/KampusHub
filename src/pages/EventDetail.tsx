@@ -201,13 +201,9 @@ export function EventDetail() {
     setActionLoading(true);
     setActionError('');
     try {
-      const status = await rsvpService.rsvpToEvent({
-        eventId: event.id,
-        userId: profile.uid,
-        userName: profile.name,
-        ...(profile.fakultas ? { fakultas: profile.fakultas } : {}),
-        ...(profile.angkatan ? { angkatan: profile.angkatan } : {}),
-      }, registeredRsvps.length);
+      // Nama, fakultas, dan angkatan tidak lagi dikirim dari sini: server
+      // menyalinnya sendiri dari profil pemanggil, jadi tidak bisa dipalsukan.
+      const status = await rsvpService.rsvpToEvent(event.id);
       const mine = await rsvpService.getUserRSVP(event.id, profile.uid);
       setMyRsvp(mine);
       const r = await rsvpService.getRSVPsForEvent(event.id);
@@ -246,7 +242,7 @@ export function EventDetail() {
     setActionLoading(true);
     setActionError('');
     try {
-      const promoted = await rsvpService.cancelRSVP(event.id, profile.uid);
+      const promoted = await rsvpService.cancelRSVP(event.id);
       setMyRsvp(null);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);

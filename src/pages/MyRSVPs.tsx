@@ -142,7 +142,7 @@ export function MyRSVPs() {
     setCancelingId(eventId);
     setError('');
     try {
-      await rsvpService.cancelRSVP(eventId, profile.uid);
+      await rsvpService.cancelRSVP(eventId);
       setRsvps(prev => prev.filter(r => r.eventId !== eventId));
       showToast('RSVP Anda telah dibatalkan.', 'info');
     } catch (err) {

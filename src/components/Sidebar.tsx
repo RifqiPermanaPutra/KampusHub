@@ -6,7 +6,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Calendar, Bell, Bookmark, User, LogOut, LayoutDashboard, Ticket, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { auth } from '../lib/firebase';
+import { authService } from '../services/authService';
 import { cn } from '../lib/utils';
 import { Logo } from './Logo';
 
@@ -32,7 +32,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     links.splice(1, 0, { to: '/dashboard', label: 'Manajemen', icon: LayoutDashboard });
   }
 
-  const handleLogout = () => auth.signOut();
+  const handleLogout = () => authService.signOut();
 
   return (
     <>

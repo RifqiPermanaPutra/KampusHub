@@ -4,9 +4,9 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import { profileService } from '../services/profileService';
 import { UserProfile } from '../types';
 import { withTimeout } from '../lib/with-timeout';
 
@@ -20,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  /** true kalau permintaan profil terakhir gagal (jaringan/izin), bukan karena dokumennya kosong. */
+  /** true kalau permintaan profil terakhir gagal (jaringan/izin), bukan karena barisnya kosong. */
   profileFailed: boolean;
   isAdmin: boolean;
   isPanitia: boolean;
@@ -38,19 +38,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (currentUser: User) => {
     try {
-      const docRef = doc(db, 'users', currentUser.uid);
-      const docSnap = await withTimeout(getDoc(docRef), PROFILE_TIMEOUT_MS, 'Server tidak merespons saat memuat profil');
-      if (docSnap.exists()) {
-        setProfile(docSnap.data() as UserProfile);
-      } else {
-        setProfile(null);
-      }
+      const hasil = await withTimeout(
+        profileService.getProfile(currentUser.id),
+        PROFILE_TIMEOUT_MS,
+        'Server tidak merespons saat memuat profil'
+      );
+      setProfile(hasil);
       setProfileFailed(false);
     } catch (error) {
       // Penting: kegagalan jaringan tidak boleh dianggap "profil belum dibuat",
       // karena itu akan mengarahkan pengguna lama ke form Lengkapi Profil dan
       // menimpa datanya (termasuk menurunkan role admin).
-      console.error("Error fetching user profile:", error);
+      // profileService.getProfile sengaja hanya mengembalikan null kalau
+      // barisnya memang tidak ada, dan melempar untuk kegagalan lain.
+      console.error('Gagal memuat profil:', error);
       setProfile(null);
       setProfileFailed(true);
     }
@@ -63,38 +64,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Tanpa koneksi, Firebase Auth bisa tidak pernah memanggil callback-nya.
+    let batal = false;
+
+    // Tanpa koneksi, status login bisa tidak pernah selesai ditentukan.
     // Setelah batas ini, hentikan layar loading agar pengguna tidak menunggu selamanya.
     const bootTimer = setTimeout(() => {
-      setLoading((masihMemuat) => {
-        if (!masihMemuat) return false;
-        console.warn('Status login tidak diketahui dalam ' + BOOT_TIMEOUT_MS + 'ms; berhenti menunggu.');
-        // Kalau sesi lama masih tersimpan, pakai itu dan tampilkan layar coba-lagi,
-        // jangan paksa pengguna login ulang hanya karena koneksi sedang mati.
-        const sesiTersimpan = auth.currentUser;
-        if (sesiTersimpan) {
-          setUser(sesiTersimpan);
-          setProfileFailed(true);
-        }
-        return false;
-      });
+      if (batal) return;
+      console.warn(`Status login tidak diketahui dalam ${BOOT_TIMEOUT_MS}ms; berhenti menunggu.`);
+      // Kalau sesi lama masih tersimpan, pakai itu dan tampilkan layar coba-lagi,
+      // jangan paksa pengguna login ulang hanya karena koneksi sedang mati.
+      void supabase.auth.getSession()
+        .then(({ data }) => {
+          if (batal) return;
+          if (data.session?.user) {
+            setUser(data.session.user);
+            setProfileFailed(true);
+          }
+        })
+        .finally(() => {
+          if (!batal) setLoading(false);
+        });
     }, BOOT_TIMEOUT_MS);
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
       setUser(currentUser);
-      if (currentUser) {
-        await fetchProfile(currentUser);
-      } else {
-        setProfile(null);
-        setProfileFailed(false);
-      }
-      clearTimeout(bootTimer);
-      setLoading(false);
+
+      /*
+       * Pekerjaan asinkron sengaja ditunda keluar dari callback ini. Klien
+       * Supabase memegang kunci internal selama callback berjalan, dan
+       * memanggil supabase lagi dari dalamnya bisa membuat keduanya saling
+       * menunggu sampai aplikasi berhenti di layar loading.
+       */
+      setTimeout(() => {
+        if (batal) return;
+        if (currentUser) {
+          void fetchProfile(currentUser).finally(() => {
+            if (batal) return;
+            clearTimeout(bootTimer);
+            setLoading(false);
+          });
+        } else {
+          setProfile(null);
+          setProfileFailed(false);
+          clearTimeout(bootTimer);
+          setLoading(false);
+        }
+      }, 0);
     });
 
     return () => {
+      batal = true;
       clearTimeout(bootTimer);
-      unsubscribe();
+      subscription.unsubscribe();
     };
   }, [fetchProfile]);
 
@@ -106,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin: profile?.role === 'admin',
     isPanitia: profile?.role === 'panitia' || profile?.role === 'admin',
     isMahasiswa: profile?.role === 'mahasiswa' || profile?.role === 'panitia' || profile?.role === 'admin',
-    reloadProfile
+    reloadProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

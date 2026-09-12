@@ -4,7 +4,6 @@ import {
   canReviewEvent,
   clampRating,
   formatRating,
-  ratingDelta,
   ratingDistribution,
 } from '../review';
 import { Event, RSVP, Review } from '../../types';
@@ -67,17 +66,6 @@ describe('clampRating', () => {
     expect(clampRating(9)).toBe(5);
     expect(clampRating(3.4)).toBe(3);
     expect(clampRating(NaN)).toBe(1);
-  });
-});
-
-describe('ratingDelta', () => {
-  it('ulasan baru menambah jumlah dan total', () => {
-    expect(ratingDelta(null, 4)).toEqual({ sumDelta: 4, countDelta: 1 });
-  });
-
-  it('ulasan yang disunting hanya menggeser total', () => {
-    expect(ratingDelta(5, 3)).toEqual({ sumDelta: -2, countDelta: 0 });
-    expect(ratingDelta(2, 5)).toEqual({ sumDelta: 3, countDelta: 0 });
   });
 });
 

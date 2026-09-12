@@ -3,87 +3,99 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { handleFirestoreError, OperationType } from '../lib/error-handler';
+import { supabase } from '../lib/supabase';
+import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
+import { ReviewRow, rowToReview } from '../lib/mappers';
 import { Review } from '../types';
-import { clampRating, ratingDelta } from '../lib/review';
+import { clampRating } from '../lib/review';
 
-/** Ulasan disimpan satu per peserta: `events/{eventId}/reviews/{userId}`. */
+const TABLE = 'reviews';
+
+/**
+ * Ulasan pasca-event, satu per peserta (kunci utama `event_id, user_id`).
+ *
+ * Tidak ada lagi transaksi untuk menjaga agregat rating: ratingSum dan
+ * ratingCount dihitung view events_with_counts dari baris yang ada, jadi
+ * rata-ratanya tidak mungkin melenceng dari ulasan yang sebenarnya.
+ *
+ * Syarat "hanya peserta yang hadir, dan hanya setelah event selesai" kini
+ * ditegakkan policy RLS, bukan hanya dicek di browser.
+ */
 export const reviewService = {
-  path(eventId: string) {
-    return `events/${eventId}/reviews`;
-  },
-
   async getReviews(eventId: string): Promise<Review[]> {
     try {
-      const q = query(collection(db, this.path(eventId)), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Review));
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as ReviewRow[]).map(rowToReview);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'reviews');
+      logDbError(error, OperationType.LIST, TABLE);
       return [];
     }
   },
 
-  subscribe(eventId: string, callback: (reviews: Review[]) => void) {
-    const q = query(collection(db, this.path(eventId)), orderBy('createdAt', 'desc'));
-    return onSnapshot(q, snapshot => {
-      callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Review)));
-    }, error => {
-      handleFirestoreError(error, OperationType.LIST, 'reviews');
-    });
-  },
-
   async getMyReview(eventId: string, userId: string): Promise<Review | null> {
     try {
-      const snap = await getDoc(doc(db, this.path(eventId), userId));
-      return snap.exists() ? ({ id: snap.id, ...snap.data() } as Review) : null;
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? rowToReview(data as ReviewRow) : null;
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, 'reviews');
+      logDbError(error, OperationType.GET, TABLE);
       return null;
     }
   },
 
-  /**
-   * Kirim atau perbarui ulasan sekaligus menyesuaikan agregat rating di event,
-   * dalam satu transaksi supaya rata-rata tidak pernah melenceng.
-   */
-  async submitReview(input: { eventId: string; userId: string; userName: string; rating: number; comment?: string }) {
-    const { eventId, userId, userName } = input;
-    const rating = clampRating(input.rating);
+  /** Kirim atau perbarui ulasan. */
+  async submitReview(input: {
+    eventId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    comment?: string;
+  }): Promise<void> {
     const comment = input.comment?.trim() ?? '';
-
     try {
-      await runTransaction(db, async (tx) => {
-        const eventRef = doc(db, 'events', eventId);
-        const reviewRef = doc(db, this.path(eventId), userId);
-
-        const eventSnap = await tx.get(eventRef);
-        if (!eventSnap.exists()) throw new Error('Event tidak ditemukan');
-        const reviewSnap = await tx.get(reviewRef);
-
-        const sebelumnya = reviewSnap.exists() ? (reviewSnap.data().rating as number) : null;
-        const { sumDelta, countDelta } = ratingDelta(sebelumnya, rating);
-        const event = eventSnap.data();
-
-        tx.set(reviewRef, {
-          userId,
-          userName,
-          eventId,
-          rating,
-          ...(comment ? { comment } : {}),
-          createdAt: reviewSnap.exists() ? reviewSnap.data().createdAt : new Date().toISOString(),
-        });
-
-        tx.update(eventRef, {
-          ratingSum: (event.ratingSum ?? 0) + sumDelta,
-          ratingCount: (event.ratingCount ?? 0) + countDelta,
-        });
-      });
+      const { error } = await supabase.from(TABLE).upsert(
+        {
+          event_id: input.eventId,
+          user_id: input.userId,
+          user_name: input.userName,
+          rating: clampRating(input.rating),
+          comment: comment || null,
+        },
+        { onConflict: 'event_id,user_id' }
+      );
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'reviews');
-      throw error;
+      throwDbError(error, OperationType.CREATE, TABLE);
     }
+  },
+
+  /**
+   * Berlangganan perubahan ulasan sebuah event. Mengembalikan fungsi untuk
+   * berhenti berlangganan, sama seperti onSnapshot sebelumnya.
+   */
+  subscribe(eventId: string, callback: (reviews: Review[]) => void) {
+    // Kirim isi saat ini lebih dulu; Realtime hanya mengabarkan perubahan.
+    void this.getReviews(eventId).then(callback);
+
+    const channel = supabase
+      .channel(`reviews-${eventId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: TABLE, filter: `event_id=eq.${eventId}` },
+        () => { void this.getReviews(eventId).then(callback); }
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
   },
 };

@@ -6,9 +6,9 @@
 import { useState } from 'react';
 import { usePageTitle } from '../lib/usePageTitle';
 import { Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { authService } from '../services/authService';
+import { profileService } from '../services/profileService';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { UserRole } from '../types';
@@ -42,98 +42,50 @@ export function Register() {
     setLoading(true);
     setError('');
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      const userData: any = {
-        uid: user.uid,
+      const sesiAktif = await authService.signUp(email, password);
+      if (!sesiAktif) {
+        // Konfirmasi email menyala di Supabase: akunnya sudah dibuat, tapi
+        // profilnya belum bisa ditulis sampai pengguna menekan tautan di email.
+        setError('Akun dibuat. Cek email Anda untuk tautan konfirmasi, lalu masuk.');
+        return;
+      }
+
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) throw new Error('Sesi tidak terbentuk setelah pendaftaran.');
+
+      await profileService.createProfile({
+        uid: data.user.id,
         name,
         email,
         role,
-        createdAt: new Date().toISOString()
-      };
-      
-      if (role === 'mahasiswa') {
-        userData.npm = npm;
-        userData.fakultas = fakultas;
-        userData.jurusan = jurusan;
-        userData.angkatan = angkatan;
-      } else if (role === 'panitia') {
-        userData.organisasi = organisasi;
-        userData.jabatan = jabatan;
-        userData.noTelepon = noTelepon;
-      }
-
-      // Create user profile in Firestore
-      await setDoc(doc(db, 'users', user.uid), userData);
+        createdAt: new Date().toISOString(),
+        ...(role === 'mahasiswa' ? { npm, fakultas, jurusan, angkatan } : {}),
+        ...(role === 'panitia' ? { organisasi, jabatan, noTelepon } : {}),
+      });
 
       navigate('/');
-    } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Email sudah digunakan');
-      } else if (err.code === 'auth/weak-password') {
-        setError('Kata sandi minimal 6 karakter');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Format alamat email tidak valid');
-      } else {
-        setError('Gagal membuat akun. Silakan coba lagi.');
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal membuat akun. Silakan coba lagi.');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  /*
+   * Tidak ada lagi pemeriksaan kolom mahasiswa/panitia di sini. Supabase masuk
+   * lewat alih-halaman, jadi apa pun yang sudah diketik di form ini hilang saat
+   * browser berpindah ke Google. Pengguna yang kembali tanpa profil diarahkan
+   * Guard ke halaman Lengkapi Profil, dan mengisinya di sana.
+   */
   const handleGoogleSignIn = async () => {
-    // Validate role-specific fields before proceeding with Google Sign-Up
-    if (role === 'mahasiswa' && (!npm || !fakultas || !jurusan || !angkatan)) {
-      setError('Mohon lengkapi semua field mahasiswa sebelum mendaftar dengan Google.');
-      return;
-    }
-    if (role === 'panitia' && (!organisasi || !jabatan || !noTelepon)) {
-      setError('Mohon lengkapi semua field panitia sebelum mendaftar dengan Google.');
-      return;
-    }
-
     setLoading(true);
     setError('');
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const user = userCredential.user;
-      
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        const userData: any = {
-          uid: user.uid,
-          name: user.displayName || 'Unknown',
-          email: user.email,
-          role: role,
-          createdAt: new Date().toISOString()
-        };
-        
-        if (role === 'mahasiswa') {
-          userData.npm = npm;
-          userData.fakultas = fakultas;
-          userData.jurusan = jurusan;
-          userData.angkatan = angkatan;
-        } else if (role === 'panitia') {
-          userData.organisasi = organisasi;
-          userData.jabatan = jabatan;
-          userData.noTelepon = noTelepon;
-        }
-
-        await setDoc(doc(db, 'users', user.uid), userData);
-      }
-      navigate('/');
-    } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user') {
-        // User closed the popup, ignore
-      } else {
-        setError('Gagal mendaftar dengan Google.');
-      }
+      await authService.signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mendaftar dengan Google.');
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };

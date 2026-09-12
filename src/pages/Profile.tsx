@@ -14,8 +14,7 @@ import { rsvpService } from '../services/rsvpService';
 import { useCountUp } from '../lib/useCountUp';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { profileService } from '../services/profileService';
 
 function StatTile({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
   const shown = useCountUp(value);
@@ -61,8 +60,7 @@ export function Profile() {
     setSaving(true);
     setError('');
     try {
-      const userRef = doc(db, 'users', profile.uid);
-      await updateDoc(userRef, { name, bio });
+      await profileService.updateProfile(profile.uid, { name, bio });
       await reloadProfile();
       setIsEditing(false);
     } catch (error) {

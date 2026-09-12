@@ -36,16 +36,6 @@ export function clampRating(value: number): number {
   return Math.min(MAX_RATING, Math.max(MIN_RATING, Math.round(value)));
 }
 
-/**
- * Perubahan agregat saat ulasan dikirim: ulasan baru menambah jumlah,
- * ulasan yang disunting hanya menggeser total nilainya.
- */
-export function ratingDelta(previous: number | null, next: number): { sumDelta: number; countDelta: number } {
-  const nilai = clampRating(next);
-  if (previous === null) return { sumDelta: nilai, countDelta: 1 };
-  return { sumDelta: nilai - clampRating(previous), countDelta: 0 };
-}
-
 /** Sebaran jumlah ulasan per bintang, dari 5 ke 1, untuk grafik analitik. */
 export function ratingDistribution(reviews: Review[]): { label: string; count: number }[] {
   const bins = new Map<number, number>([[5, 0], [4, 0], [3, 0], [2, 0], [1, 0]]);

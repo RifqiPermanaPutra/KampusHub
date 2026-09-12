@@ -14,11 +14,11 @@ import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Check, X, Eye, Edit, Trash2, AlertTriangle, Users, Calendar, CalendarCheck, UserCheck, Percent } from 'lucide-react';
 import { rsvpService } from '../services/rsvpService';
-import { buildCampusAnalytics, CampusAnalytics } from '../lib/analytics';
+import { CampusAnalytics } from '../lib/analytics';
 import { StatCard } from '../components/ui/StatCard';
 import { SimpleBarChart } from '../components/charts/SimpleBarChart';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { profileService } from '../services/profileService';
+import { analyticsService } from '../services/analyticsService';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -50,13 +50,11 @@ export function Dashboard() {
           const eventsData = await eventService.getAllEvents();
           setEvents(eventsData);
 
-          const usersSnapshot = await getDocs(collection(db, 'users'));
-          const usersData = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
-          setUsers(usersData);
+          setUsers(await profileService.getAllProfiles());
 
-          // Ringkasan lintas event: satu kali baca koleksi rsvps.
-          const semuaRsvp = await rsvpService.getAllRSVPs();
-          setKampus(buildCampusAnalytics(eventsData, semuaRsvp));
+          // Ringkasan lintas event dihitung Postgres; yang diterima di sini
+          // sudah berupa angka jadi, bukan seluruh tabel pendaftaran.
+          setKampus(await analyticsService.getCampusAnalytics());
         } else if (profile.role === 'panitia') {
           const data = await eventService.getEventsByOrganizer(profile.uid);
           setEvents(data);

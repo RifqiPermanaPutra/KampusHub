@@ -3,116 +3,99 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  query,
-  where,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { handleFirestoreError, OperationType } from '../lib/error-handler';
+import { supabase } from '../lib/supabase';
+import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
+import { EventRow, eventToRow, rowToEvent } from '../lib/mappers';
 import { Event, EventStatus } from '../types';
 
-const COLLECTION_NAME = 'events';
+/*
+ * Dibaca dari view events_with_counts supaya attendeeCount, waitlistCount, dan
+ * agregat rating ikut terisi tanpa perlu disimpan di tabel. Penulisan tetap ke
+ * tabel events.
+ */
+const VIEW = 'events_with_counts';
+const TABLE = 'events';
 
 export const eventService = {
-  async getAllEvents(status?: EventStatus) {
+  async getAllEvents(status?: EventStatus): Promise<Event[]> {
     try {
-      let q = query(collection(db, COLLECTION_NAME));
-      if (status) {
-        q = query(q, where('status', '==', status));
-      }
-      const snapshot = await getDocs(q);
-      const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
-      return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      let q = supabase.from(VIEW).select('*').order('date', { ascending: true });
+      if (status) q = q.eq('status', status);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data as EventRow[]).map(rowToEvent);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, COLLECTION_NAME);
+      logDbError(error, OperationType.LIST, VIEW);
       return [];
     }
   },
 
-  async getEventById(id: string) {
+  async getEventById(id: string): Promise<Event | null> {
     try {
-      const docRef = doc(db, COLLECTION_NAME, id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Event;
-      }
-      return null;
+      const { data, error } = await supabase
+        .from(VIEW)
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      return data ? rowToEvent(data as EventRow) : null;
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `${COLLECTION_NAME}/${id}`);
+      logDbError(error, OperationType.GET, `${VIEW}/${id}`);
       return null;
     }
   },
 
-  async createEvent(eventData: Omit<Event, 'id' | 'createdAt' | 'status'>) {
+  async createEvent(eventData: Omit<Event, 'id' | 'createdAt' | 'status'>): Promise<string | undefined> {
     try {
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-        ...eventData,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      });
-      return docRef.id;
+      const { data, error } = await supabase
+        .from(TABLE)
+        .insert({ ...eventToRow(eventData), status: 'pending' })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id as string;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, COLLECTION_NAME);
+      throwDbError(error, OperationType.CREATE, TABLE);
     }
   },
 
-  async updateEvent(id: string, eventData: Partial<Event>) {
+  async updateEvent(id: string, eventData: Partial<Event>): Promise<void> {
     try {
-      const docRef = doc(db, COLLECTION_NAME, id);
-      await updateDoc(docRef, { ...eventData });
+      const { error } = await supabase.from(TABLE).update(eventToRow(eventData)).eq('id', id);
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `${COLLECTION_NAME}/${id}`);
+      throwDbError(error, OperationType.UPDATE, `${TABLE}/${id}`);
     }
   },
 
   /**
-   * Hapus event beserta data turunannya. Firestore tidak menghapus subkoleksi
-   * secara otomatis, jadi RSVP (subkoleksi maupun koleksi top-level) dan komentar
-   * dibersihkan manual — sesuai yang dijanjikan dialog konfirmasi di UI.
+   * RSVP, ulasan, komentar, dan simpanan ikut terhapus lewat `on delete cascade`
+   * di skema, bukan dibersihkan satu per satu dari browser seperti dulu.
+   * Karena penghapusannya satu transaksi database, tidak mungkin lagi tersisa
+   * data yatim kalau sebagian permintaan gagal di tengah jalan.
    */
-  async deleteEvent(id: string) {
+  async deleteEvent(id: string): Promise<void> {
     try {
-      const subRsvps = await getDocs(collection(db, `events/${id}/rsvps`));
-      const comments = await getDocs(collection(db, `events/${id}/comments`));
-      const topRsvps = await getDocs(query(collection(db, 'rsvps'), where('eventId', '==', id)));
-
-      // allSettled: kalau aturan Firestore menolak sebagian dokumen turunan,
-      // penghapusan event utamanya tetap jalan.
-      const results = await Promise.allSettled([
-        ...subRsvps.docs.map(d => deleteDoc(d.ref)),
-        ...comments.docs.map(d => deleteDoc(d.ref)),
-        ...topRsvps.docs.map(d => deleteDoc(d.ref)),
-      ]);
-      const gagal = results.filter(r => r.status === 'rejected').length;
-      if (gagal > 0) {
-        console.warn(`${gagal} dokumen turunan event ${id} gagal dihapus (kemungkinan ditolak security rules).`);
-      }
-
-      await deleteDoc(doc(db, COLLECTION_NAME, id));
+      const { error } = await supabase.from(TABLE).delete().eq('id', id);
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `${COLLECTION_NAME}/${id}`);
+      throwDbError(error, OperationType.DELETE, `${TABLE}/${id}`);
     }
   },
 
-  async getEventsByOrganizer(organizerId: string) {
+  async getEventsByOrganizer(organizerId: string): Promise<Event[]> {
     try {
-      const q = query(
-        collection(db, COLLECTION_NAME), 
-        where('organizerId', '==', organizerId)
-      );
-      const snapshot = await getDocs(q);
-      const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
-      return events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const { data, error } = await supabase
+        .from(VIEW)
+        .select('*')
+        .eq('organizer_id', organizerId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as EventRow[]).map(rowToEvent);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, COLLECTION_NAME);
+      logDbError(error, OperationType.LIST, VIEW);
       return [];
     }
-  }
+  },
 };

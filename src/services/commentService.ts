@@ -3,53 +3,60 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { handleFirestoreError, OperationType } from '../lib/error-handler';
+import { supabase } from '../lib/supabase';
+import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
+import { CommentRow, rowToComment } from '../lib/mappers';
 import { Comment } from '../types';
 
+const TABLE = 'comments';
+
 export const commentService = {
-  async getComments(eventId: string) {
+  async getComments(eventId: string): Promise<Comment[]> {
     try {
-      const path = `events/${eventId}/comments`;
-      const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as CommentRow[]).map(rowToComment);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'comments');
+      logDbError(error, OperationType.LIST, TABLE);
       return [];
     }
   },
 
-  async addComment(commentData: Omit<Comment, 'id' | 'createdAt'>) {
+  async addComment(commentData: Omit<Comment, 'id' | 'createdAt'>): Promise<string | undefined> {
     try {
-      const path = `events/${commentData.eventId}/comments`;
-      const docRef = await addDoc(collection(db, path), {
-        ...commentData,
-        createdAt: new Date().toISOString(),
-      });
-      return docRef.id;
+      const { data, error } = await supabase
+        .from(TABLE)
+        .insert({
+          event_id: commentData.eventId,
+          user_id: commentData.userId,
+          user_name: commentData.userName,
+          body: commentData.body,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id as string;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'comments');
+      throwDbError(error, OperationType.CREATE, TABLE);
     }
   },
 
   subscribe(eventId: string, callback: (comments: Comment[]) => void) {
-    const path = `events/${eventId}/comments`;
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-    
-    return onSnapshot(q, (snapshot) => {
-      const comments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
-      callback(comments);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, path);
-    });
-  }
+    void this.getComments(eventId).then(callback);
+
+    const channel = supabase
+      .channel(`comments-${eventId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: TABLE, filter: `event_id=eq.${eventId}` },
+        () => { void this.getComments(eventId).then(callback); }
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+  },
 };
