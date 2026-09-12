@@ -6,6 +6,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { rsvpService } from '../services/rsvpService';
+import { savedService } from '../services/savedService';
 import { eventService } from '../services/eventService';
 import { isWithinReminderWindow, reminderNotificationId } from './reminder-logic';
 
@@ -17,10 +18,16 @@ import { isWithinReminderWindow, reminderNotificationId } from './reminder-logic
 export async function runReminderCheck(userId: string): Promise<void> {
   try {
     const rsvps = await rsvpService.getRSVPsForUser(userId);
-    const upcoming = rsvps.filter(r => r.status !== 'waitlist');
+    const savedIds = await savedService.getSavedIds(userId);
 
-    for (const rsvp of upcoming) {
-      const event = await eventService.getEventById(rsvp.eventId);
+    // Event yang di-RSVP maupun yang hanya disimpan sama-sama diingatkan.
+    const eventIds = new Set<string>([
+      ...rsvps.filter(r => r.status !== 'waitlist').map(r => r.eventId),
+      ...savedIds,
+    ]);
+
+    for (const eventId of eventIds) {
+      const event = await eventService.getEventById(eventId);
       if (!event || !isWithinReminderWindow(event.date)) continue;
 
       const notifRef = doc(db, `users/${userId}/notifications`, reminderNotificationId(event.id));

@@ -38,10 +38,15 @@ export interface Event {
   organizerName: string;
   createdAt: string;
   capacity?: number;
+  /** Batas waktu pendaftaran (ISO). Kosong = terbuka sampai event selesai. */
+  rsvpDeadline?: string;
   // Counter yang dijaga secara atomik oleh transaksi RSVP.
   // Event lama mungkin belum punya field ini (fallback: hitung dari daftar RSVP).
   attendeeCount?: number;
   waitlistCount?: number;
+  /** Agregat rating pasca-event; dipakai untuk menghitung rata-rata. */
+  ratingSum?: number;
+  ratingCount?: number;
 }
 
 export type RSVPStatus = 'registered' | 'checked-in' | 'waitlist';
@@ -65,6 +70,17 @@ export interface Comment {
   userName: string;
   eventId: string;
   body: string;
+  createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  eventId: string;
+  /** 1 sampai 5 bintang. */
+  rating: number;
+  comment?: string;
   createdAt: string;
 }
 
