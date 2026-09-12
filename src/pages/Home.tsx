@@ -6,17 +6,17 @@ import { rsvpService } from '../services/rsvpService';
 import { recommendEvents } from '../lib/recommendation';
 import { Event } from '../types';
 import { FeaturedSlider } from '../components/FeaturedEvent';
-import { AnnouncementCard } from '../components/AnnouncementCard';
+import { InfoBoardCard } from '../components/InfoBoardCard';
 import { EventCard, wallTilt } from '../components/EventCard';
 import { Button } from '../components/ui/Button';
 import { CATEGORIES } from '../constants';
 import { getEventPhase } from '../lib/event-phase';
+import { buildInfoBoard } from '../lib/info-board';
 import { cn } from '../lib/utils';
 import { usePageTitle } from '../lib/usePageTitle';
 import { EventGridSkeleton } from '../components/ui/Skeleton';
 
 const ALL = 'Semua';
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 function greeting(hour: number) {
   if (hour < 11) return 'Selamat pagi';
@@ -104,15 +104,13 @@ export function Home() {
 
   const hasUpcoming = featuredEvents.length > 0;
 
-  // Jumlah event yang berlangsung dalam 7 hari ke depan, untuk headline.
-  const weekCount = useMemo(() => {
-    const now = Date.now();
-    return events.filter(e => {
-      const t = new Date(e.date).getTime();
-      return t >= now && t <= now + WEEK_MS;
-    }).length;
+  // Ringkasan isi mading. Dihitung sekali di sini lalu dipakai bersama oleh
+  // headline dan kartu Papan Info, supaya keduanya tidak mungkin berbeda angka.
+  const info = useMemo(
+    () => buildInfoBoard(events),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, tick]);
+    [events, tick]
+  );
 
   const firstName = profile?.name?.split(' ')[0];
 
@@ -137,8 +135,8 @@ export function Home() {
             {greeting(new Date().getHours())}{firstName ? `, ${firstName}` : ''}
           </p>
           <h2 className="editorial-title text-4xl sm:text-5xl lg:text-6xl leading-[0.95] text-ink">
-            {weekCount > 0 ? (
-              <>Minggu ini ada <span className="marker marker-draw">{weekCount} event</span> di kampus.</>
+            {info.mingguIni > 0 ? (
+              <>Minggu ini ada <span className="marker marker-draw">{info.mingguIni} event</span> di kampus.</>
             ) : (
               <>Mading minggu ini masih <span className="marker marker-draw">kosong</span>.</>
             )}
@@ -169,7 +167,7 @@ export function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-2">
           <FeaturedSlider events={featuredEvents} />
-          <AnnouncementCard />
+          <InfoBoardCard info={info} />
         </div>
       </section>
 
