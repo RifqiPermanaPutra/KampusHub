@@ -72,6 +72,17 @@ export const rsvpService = {
     }
   },
 
+  /** Semua RSVP di koleksi top-level; dipakai untuk ringkasan lintas event (admin). */
+  async getAllRSVPs(): Promise<RSVP[]> {
+    try {
+      const snapshot = await getDocs(collection(db, 'rsvps'));
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as RSVP));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'rsvps');
+      return [];
+    }
+  },
+
   async getRSVPsForEvent(eventId: string) {
     try {
       const path = `events/${eventId}/rsvps`;
