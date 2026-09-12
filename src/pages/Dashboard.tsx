@@ -19,6 +19,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { SimpleBarChart } from '../components/charts/SimpleBarChart';
 import { profileService } from '../services/profileService';
 import { analyticsService } from '../services/analyticsService';
+import { Avatar } from '../components/ui/Avatar';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -330,9 +331,7 @@ export function Dashboard() {
                   <tr key={user.uid} className="hover:bg-stabilo/10 transition-colors motion-reduce:transition-none">
                     <td className={td}>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full border-2 border-ink bg-stiker overflow-hidden shrink-0">
-                          <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}&backgroundColor=ff9ecf&textColor=121212`} alt="" referrerPolicy="no-referrer" />
-                        </div>
+                        <Avatar nama={user.name} className="w-10 h-10 text-sm" />
                         <div className="min-w-0">
                           <p className="font-bold text-ink line-clamp-1">{user.name}</p>
                           <p className="text-xs text-ink/60">{user.email}</p>

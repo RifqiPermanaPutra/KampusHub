@@ -7,6 +7,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Calendar, Bell, Bookmark, User, LogOut, LayoutDashboard, Ticket, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
+import { Avatar } from './ui/Avatar';
 import { cn } from '../lib/utils';
 import { Logo } from './Logo';
 
@@ -95,13 +96,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {profile ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full border-2 border-ink bg-stiker overflow-hidden shrink-0">
-                  <img
-                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${profile.name}&backgroundColor=ff9ecf&textColor=121212`}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+                <Avatar nama={profile.name} className="w-10 h-10 text-sm" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-ink truncate max-w-[140px]">{profile.name}</p>
                   <p className="text-xs font-medium text-ink/70 capitalize">{profile.role}</p>

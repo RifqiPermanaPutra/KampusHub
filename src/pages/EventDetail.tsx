@@ -19,6 +19,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { StatusPill } from '../components/ui/StatusPill';
+import { Avatar } from '../components/ui/Avatar';
 import { ReviewSection } from '../components/ReviewSection';
 import { getQuotaSticker } from '../components/EventCard';
 import { getCategoryStyle } from '../constants';
@@ -554,13 +555,7 @@ export function EventDetail() {
             {rsvps.length > 0 && (
               <div className="flex -space-x-2.5">
                 {rsvps.slice(0, 5).map((rsvp) => (
-                  <div key={rsvp.id} className="w-9 h-9 rounded-full border-2 border-ink bg-stiker overflow-hidden">
-                    <img
-                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${rsvp.userName}&backgroundColor=ff9ecf&textColor=121212`}
-                      alt={rsvp.userName}
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
+                  <Avatar key={rsvp.id} nama={rsvp.userName} alt={rsvp.userName} className="w-9 h-9 text-[11px]" />
                 ))}
                 {rsvps.length > 5 && (
                   <div className="w-9 h-9 rounded-full border-2 border-ink bg-white flex items-center justify-center text-[11px] font-bold text-ink">

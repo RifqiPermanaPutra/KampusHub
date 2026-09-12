@@ -15,6 +15,7 @@ import { useCountUp } from '../lib/useCountUp';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { profileService } from '../services/profileService';
+import { Avatar } from '../components/ui/Avatar';
 
 function StatTile({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
   const shown = useCountUp(value);
@@ -87,14 +88,11 @@ export function Profile() {
             <span className="absolute right-40 -bottom-24 h-48 w-48 rounded-full border-2 border-white/25" />
           </div>
 
-          <div className="absolute -bottom-14 left-6 sm:left-10 w-28 h-28 rounded-xl border-2 border-ink bg-stiker overflow-hidden -rotate-3 shadow-sticker">
-            <img
-              src={`https://api.dicebear.com/7.x/initials/svg?seed=${profile.name}&backgroundColor=ff9ecf&textColor=121212`}
-              alt={profile.name}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
+          <Avatar
+            nama={profile.name}
+            alt={profile.name}
+            className="absolute -bottom-14 left-6 sm:left-10 w-28 h-28 !rounded-xl text-4xl -rotate-3 shadow-sticker motion-reduce:rotate-0"
+          />
 
           <div className="absolute right-4 bottom-4 sm:right-6">
             {!isEditing ? (
@@ -202,8 +200,10 @@ export function Profile() {
               </div>
               <p className="editorial-title text-2xl text-ink">Data yang dibagikan</p>
               <p className="text-sm text-ink/80 font-medium">
-                Setiap kali Anda RSVP, panitia event itu melihat nama, fakultas, dan
-                angkatan Anda. Email dan nomor telepon tidak ikut dibagikan.
+                Saat Anda RSVP, nama Anda muncul di daftar peserta event itu dan bisa
+                dilihat pengguna lain yang membukanya. Panitia event juga menerima
+                fakultas dan angkatan Anda untuk rekap kehadiran. Email dan nomor
+                telepon tidak dibagikan.
               </p>
             </div>
           </div>
