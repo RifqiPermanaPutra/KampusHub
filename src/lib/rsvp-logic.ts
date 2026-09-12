@@ -7,7 +7,7 @@ import { RSVPStatus } from '../types';
 
 /**
  * Menentukan status RSVP baru berdasarkan kapasitas dan jumlah peserta terdaftar.
- * Pure function agar mudah diuji — dipanggil di dalam transaksi Firestore.
+ * Pure function agar mudah diuji. Dipanggil dari fungsi rsvp_event di database.
  */
 export function decideRsvpStatus(
   capacity: number | undefined,

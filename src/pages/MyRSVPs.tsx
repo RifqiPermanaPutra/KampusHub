@@ -98,7 +98,7 @@ function TicketModal({ rsvp, holderName, onClose }: { rsvp: RsvpWithEvent; holde
         {phase === 'live' && !checkedIn && (
           <div className="rounded-lg border-2 border-ink bg-spidol/20 p-3 text-sm font-semibold text-ink flex items-center gap-2">
             <span className="live-dot w-2 h-2 shrink-0 rounded-full border border-ink bg-spidol" aria-hidden="true" />
-            Event sedang berlangsung — check-in dibuka sekarang.
+            Event sedang berlangsung, check-in dibuka sekarang.
           </div>
         )}
 

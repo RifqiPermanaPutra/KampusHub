@@ -49,7 +49,7 @@ export const authService = {
 
   /**
    * Masuk dengan Google. Supabase memakai alih-halaman, bukan popup, jadi
-   * fungsi ini tidak pernah "selesai" — browser berpindah ke Google lalu
+   * fungsi ini tidak pernah "selesai". Browser berpindah ke Google lalu
    * kembali ke aplikasi dengan sesi yang sudah terpasang.
    *
    * Pengguna Google yang baru pertama kali masuk belum punya baris profil,

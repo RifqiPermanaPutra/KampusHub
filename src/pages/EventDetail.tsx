@@ -215,7 +215,7 @@ export function EventDetail() {
       }
 
       showToast(status === 'waitlist'
-        ? 'Kuota penuh — Anda masuk daftar tunggu.'
+        ? 'Kuota penuh. Anda masuk daftar tunggu.'
         : 'RSVP berhasil! Tiket tersedia di halaman RSVP Saya.',
         status === 'waitlist' ? 'info' : 'success');
 

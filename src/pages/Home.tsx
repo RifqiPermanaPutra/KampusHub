@@ -142,7 +142,7 @@ export function Home() {
             )}
           </h2>
           <p className="mt-4 text-ink/70 max-w-lg">
-            Dari seminar sampai futsal. Pilih, RSVP, datang — tiketnya langsung ada di HP.
+            Dari seminar sampai futsal. Pilih, RSVP, datang, tiketnya langsung ada di HP.
           </p>
         </div>
 

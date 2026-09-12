@@ -12,7 +12,7 @@ import { CampusAnalytics } from '../lib/analytics';
  *
  * Menggantikan pola lama: seluruh koleksi rsvps ditarik ke browser lalu
  * dijumlahkan di sana. Sekarang penjumlahannya dikerjakan Postgres dan yang
- * melintasi jaringan hanya hasil akhirnya — beberapa ratus byte, berapa pun
+ * melintasi jaringan hanya hasil akhirnya, beberapa ratus byte, berapa pun
  * jumlah pendaftaran yang ada.
  *
  * Fungsi campus_analytics() memeriksa sendiri bahwa pemanggilnya admin.

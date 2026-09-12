@@ -39,7 +39,7 @@ VITE_SUPABASE_ANON_KEY="eyJhbGciOi..."`}
 
         <p className="text-sm text-ink/60">
           Setelah kedua nilai terisi, hentikan dan jalankan ulang{' '}
-          <code className="font-mono">npm run dev</code> — Vite hanya membaca berkas
+          <code className="font-mono">npm run dev</code>. Vite hanya membaca berkas
           lingkungan saat server dinyalakan.
         </p>
       </div>

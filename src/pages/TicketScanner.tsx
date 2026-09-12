@@ -6,6 +6,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { pasangTerjemahanScanner } from '../lib/scanner-i18n';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { rsvpService } from '../services/rsvpService';
@@ -59,14 +60,17 @@ export function TicketScanner() {
       }
 
       try {
-        await rsvpService.checkInRSVP(event.id, decodedText);
-        setScanResult({ status: 'success', message: `Berhasil Check-in! ID: ${decodedText.substring(0, 8)}...` });
+        const peserta = await rsvpService.checkInRSVP(event.id, decodedText);
+        setScanResult({ status: 'success', message: `Berhasil check-in: ${peserta.userName}` });
         
         // Refresh RSVPs to update manual list
         const r = await rsvpService.getRSVPsForEvent(event.id);
         setRsvps(r);
       } catch (err) {
-        setScanResult({ status: 'error', message: 'Gagal Check-in. Tiket tidak valid atau bukan untuk event ini.' });
+        // Pesan dari database sudah menjelaskan sebabnya: tiket event lain,
+        // peserta masih daftar tunggu, atau memang tidak terdaftar.
+        const sebab = err instanceof Error ? err.message : 'Tiket tidak valid.';
+        setScanResult({ status: 'error', message: `Gagal check-in. ${sebab}` });
       }
 
       // Resume scanning after 3 seconds
@@ -86,7 +90,13 @@ export function TicketScanner() {
     
     scannerRef.current.render(onScanSuccess, () => {});
 
+    // Pustaka merender antarmukanya sendiri dalam bahasa Inggris dan menyisipkan
+    // tautan ke situs pembuatnya. Keduanya dirapikan setelah render.
+    const wadah = document.getElementById('reader');
+    const lepasTerjemahan = wadah ? pasangTerjemahanScanner(wadah) : undefined;
+
     return () => {
+      lepasTerjemahan?.();
       if (scannerRef.current) {
         scannerRef.current.clear().catch(console.error);
       }
@@ -138,7 +148,7 @@ export function TicketScanner() {
         <section className="mading-card p-6 space-y-5">
           <div className="flex items-center gap-2 text-ink font-bold">
             <ScanLine size={20} />
-            Scan QR Code
+            Pindai QR Tiket
           </div>
 
           {phase === 'upcoming' && (
@@ -195,7 +205,7 @@ export function TicketScanner() {
                   <StatusPill status="checked-in" label="Hadir" />
                 ) : (
                   <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleManualCheckIn(rsvp.id)}>
-                    Manual Check-in
+                    Check-in Manual
                   </Button>
                 )}
               </div>

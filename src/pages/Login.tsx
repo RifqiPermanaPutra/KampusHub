@@ -63,17 +63,19 @@ export function Login() {
     >
         <form onSubmit={handleLogin} className="space-y-6">
           <Input 
-            label="Alamat Email" 
-            type="email" 
-            placeholder="name@university.edu" 
+            label="Alamat Email"
+            type="email"
+            autoComplete="email"
+            placeholder="nama@kampus.ac.id"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
           <Input 
-            label="Kata Sandi" 
-            type="password" 
-            placeholder="••••••••" 
+            label="Kata Sandi"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Kata sandi Anda"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

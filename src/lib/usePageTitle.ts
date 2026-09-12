@@ -10,7 +10,7 @@ const BASE_TITLE = 'KampusHub';
 /** Set document.title per halaman; kembali ke default saat unmount. */
 export function usePageTitle(title?: string) {
   useEffect(() => {
-    document.title = title ? `${title} — ${BASE_TITLE}` : `${BASE_TITLE} - Platform Event Kampus`;
+    document.title = title ? `${title} · ${BASE_TITLE}` : `${BASE_TITLE} - Platform Event Kampus`;
     return () => {
       document.title = `${BASE_TITLE} - Platform Event Kampus`;
     };

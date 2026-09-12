@@ -110,24 +110,28 @@ export function Register() {
           <RoleToggle value={role} onChange={setRole} />
 
           <Input 
-            label="Nama Lengkap" 
-            placeholder="Contoh: Budi Santoso" 
+            label="Nama Lengkap"
+            autoComplete="name"
+            placeholder="Contoh: Budi Santoso"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
           <Input 
-            label="Alamat Email" 
-            type="email" 
-            placeholder="name@university.edu" 
+            label="Alamat Email"
+            type="email"
+            autoComplete="email"
+            placeholder="nama@kampus.ac.id"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
           <Input 
-            label="Kata Sandi" 
-            type="password" 
-            placeholder="Minimal 6 karakter" 
+            label="Kata Sandi"
+            type="password"
+            autoComplete="new-password"
+            minLength={6}
+            placeholder="Minimal 6 karakter"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -137,28 +141,28 @@ export function Register() {
             <>
               <Input 
                 label="NPM" 
-                placeholder="Ex: 12345678" 
+                placeholder="Contoh: 12345678" 
                 value={npm}
                 onChange={(e) => setNpm(e.target.value)}
                 required
               />
               <Input 
                 label="Fakultas" 
-                placeholder="Ex: Ilmu Komputer" 
+                placeholder="Contoh: Ilmu Komputer" 
                 value={fakultas}
                 onChange={(e) => setFakultas(e.target.value)}
                 required
               />
               <Input 
                 label="Jurusan" 
-                placeholder="Ex: Teknik Informatika" 
+                placeholder="Contoh: Teknik Informatika" 
                 value={jurusan}
                 onChange={(e) => setJurusan(e.target.value)}
                 required
               />
               <Input 
                 label="Tahun Angkatan" 
-                placeholder="Ex: 2023" 
+                placeholder="Contoh: 2023" 
                 value={angkatan}
                 onChange={(e) => setAngkatan(e.target.value)}
                 required
@@ -170,14 +174,14 @@ export function Register() {
             <>
               <Input 
                 label="Nama Organisasi / UKM" 
-                placeholder="Ex: BEM Fasilkom" 
+                placeholder="Contoh: BEM Fasilkom" 
                 value={organisasi}
                 onChange={(e) => setOrganisasi(e.target.value)}
                 required
               />
               <Input 
                 label="Jabatan" 
-                placeholder="Ex: Ketua Pelaksana" 
+                placeholder="Contoh: Ketua Pelaksana" 
                 value={jabatan}
                 onChange={(e) => setJabatan(e.target.value)}
                 required
@@ -185,7 +189,8 @@ export function Register() {
               <Input 
                 label="Nomor Telepon / WhatsApp" 
                 type="tel"
-                placeholder="Ex: 08123456789" 
+                autoComplete="tel"
+                placeholder="Contoh: 08123456789" 
                 value={noTelepon}
                 onChange={(e) => setNoTelepon(e.target.value)}
                 required

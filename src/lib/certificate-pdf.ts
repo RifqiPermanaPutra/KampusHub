@@ -76,7 +76,7 @@ export function downloadCertificate(rsvp: RSVP, event: Event) {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(12);
   pdf.setTextColor(...MUTED);
-  pdf.text(`${eventDate} — ${event.location}`, w / 2, 136, { align: 'center' });
+  pdf.text(`${eventDate} di ${event.location}`, w / 2, 136, { align: 'center' });
   pdf.setFontSize(11);
   pdf.text(`Diselenggarakan oleh ${event.organizerName}`, w / 2, 144, { align: 'center' });
 

@@ -12,7 +12,7 @@ export function buildShareText(event: Event): string {
   const tanggal = new Date(event.date).toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
-  return `${event.title} — ${tanggal} di ${event.location}. Daftar lewat KampusHub:`;
+  return `${event.title}, ${tanggal} di ${event.location}. Daftar lewat KampusHub:`;
 }
 
 /**

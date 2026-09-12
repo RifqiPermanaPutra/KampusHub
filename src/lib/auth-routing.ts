@@ -7,7 +7,7 @@ import { UserRole } from '../types';
 
 export type AuthDecision =
   | { kind: 'loading' }
-  /** Gagal memuat profil (jaringan/izin) — jangan diperlakukan sebagai profil kosong. */
+  /** Gagal memuat profil (jaringan/izin), jangan diperlakukan sebagai profil kosong. */
   | { kind: 'profile-error' }
   | { kind: 'redirect'; to: '/login' | '/complete-profile' | '/' }
   | { kind: 'allow' };

@@ -93,7 +93,7 @@ export function ReviewSection({
       {bolehMenilai && (
         <form onSubmit={handleSubmit} className="mading-card p-5 space-y-4">
           <p className="font-bold text-ink">
-            {sudahDinilai ? 'Ubah penilaian kamu' : 'Kamu hadir di event ini — bagaimana menurutmu?'}
+            {sudahDinilai ? 'Ubah penilaian kamu' : 'Kamu hadir di event ini. Bagaimana menurutmu?'}
           </p>
           <StarRatingInput value={rating} onChange={setRating} disabled={submitting} />
           <textarea

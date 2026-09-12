@@ -14,7 +14,7 @@ const TABLE = 'rsvps';
  * Pendaftaran, pembatalan, dan check-in tidak menulis ke tabel secara langsung.
  * Ketiganya memanggil fungsi database (lihat supabase/migrations/03_functions.sql)
  * yang mengunci baris event, sehingga kuota, daftar tunggu, dan batas waktu
- * pendaftaran ditegakkan server — bukan diputuskan browser lalu dipercaya.
+ * pendaftaran ditegakkan server, bukan diputuskan browser lalu dipercaya.
  *
  * Tabel rsvps memang tidak punya policy insert/update sama sekali: memanggil
  * API secara langsung untuk menyelundupkan kursi tidak akan berhasil.
@@ -101,15 +101,19 @@ export const rsvpService = {
    * Check-in tiket. `ticket` adalah isi QR: `{eventId}_{userId}`.
    * Satu UPDATE atomik di server; tidak ada lagi kemungkinan status berbeda
    * antara dua salinan data seperti pada versi Firestore.
+   *
+   * Mengembalikan baris RSVP peserta supaya scanner bisa menyebut namanya.
+   * Panitia yang memindai perlu tahu siapa yang barusan masuk, bukan potongan
+   * kode tiketnya.
    */
-  async checkInRSVP(eventId: string, ticket: string): Promise<boolean> {
+  async checkInRSVP(eventId: string, ticket: string): Promise<RSVP> {
     try {
-      const { error } = await supabase.rpc('check_in_rsvp', {
+      const { data, error } = await supabase.rpc('check_in_rsvp', {
         p_event_id: eventId,
         p_ticket: ticket,
       });
       if (error) throw error;
-      return true;
+      return rowToRsvp(data as RsvpRow);
     } catch (error) {
       throwDbError(error, OperationType.UPDATE, TABLE);
     }

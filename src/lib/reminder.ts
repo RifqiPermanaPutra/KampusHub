@@ -14,7 +14,7 @@ import { isWithinReminderWindow, reminderNotificationId } from './reminder-logic
  * lalu buat notifikasi pengingat untuk event yang berlangsung < 24 jam lagi.
  *
  * Idempotensinya dijaga `dedupe_key` beserta indeks uniknya di database, jadi
- * membuka aplikasi berkali-kali — atau membuka dua tab sekaligus — tetap
+ * membuka aplikasi berkali-kali, atau membuka dua tab sekaligus, tetap
  * menghasilkan satu pengingat per event.
  */
 export async function runReminderCheck(userId: string): Promise<void> {

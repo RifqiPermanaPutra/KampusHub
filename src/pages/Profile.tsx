@@ -190,12 +190,21 @@ export function Profile() {
               <StatTile icon={<UserCheck size={16} />} label="Sudah hadir" value={rekap.hadir} accent="bg-daun" />
               <StatTile icon={<Hourglass size={16} />} label="Daftar tunggu" value={rekap.waitlist} accent="bg-stiker" />
             </div>
+            {/*
+              * Kartu ini sebelumnya berbunyi "KampusHub Pro", menjanjikan
+              * tingkatan produk yang tidak pernah ada. Diganti keterangan yang
+              * benar dan memang perlu diketahui pengguna: data apa yang ikut
+              * terkirim ke panitia setiap kali dia RSVP.
+              */}
             <div className="tape rounded-xl border-2 border-ink bg-stabilo p-7 flex flex-col items-center justify-center text-center space-y-3 rotate-1 motion-reduce:rotate-0">
               <div className="w-14 h-14 bg-white rounded-lg border-2 border-ink flex items-center justify-center text-ink">
-                <UserIcon size={28} />
+                <Shield size={28} />
               </div>
-              <p className="editorial-title text-2xl text-ink">KampusHub Pro</p>
-              <p className="text-sm text-ink/80 font-medium">Profil Anda terlihat oleh panitia saat Anda RSVP.</p>
+              <p className="editorial-title text-2xl text-ink">Data yang dibagikan</p>
+              <p className="text-sm text-ink/80 font-medium">
+                Setiap kali Anda RSVP, panitia event itu melihat nama, fakultas, dan
+                angkatan Anda. Email dan nomor telepon tidak ikut dibagikan.
+              </p>
             </div>
           </div>
         </div>
