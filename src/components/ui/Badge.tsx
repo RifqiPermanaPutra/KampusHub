@@ -7,27 +7,23 @@ import { cn } from '../../lib/utils';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'blue' | 'green' | 'purple' | 'red' | 'gray';
+  variant?: 'blue' | 'green' | 'purple' | 'red' | 'yellow' | 'gray';
   className?: string;
 }
 
+/** Label kecil bergaya stiker: border tinta, huruf mono. */
 export function Badge({ children, variant = 'blue', className }: BadgeProps) {
   const variants = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    red: 'bg-red-50 text-red-600',
-    gray: 'bg-gray-100 text-gray-500',
+    blue: 'bg-pulpen text-white',
+    green: 'bg-daun text-ink',
+    purple: 'bg-stiker text-ink',
+    red: 'bg-spidol text-ink',
+    yellow: 'bg-stabilo text-ink',
+    gray: 'bg-white text-ink/70',
   };
 
   return (
-    <span
-      className={cn(
-        'inline-block rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider',
-        variants[variant],
-        className
-      )}
-    >
+    <span className={cn('sticker', variants[variant], className)}>
       {children}
     </span>
   );

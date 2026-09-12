@@ -7,7 +7,7 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'stabilo' | 'outline' | 'ghost' | 'danger' | 'success';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
 }
@@ -20,10 +20,17 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
+  // Tombol "stiker": border tinta + bayangan offset yang hilang saat ditekan.
+  const sticker =
+    'border-2 border-ink shadow-sticker hover:-translate-x-px hover:-translate-y-px hover:shadow-sticker-lg active:translate-x-0.5 active:translate-y-0.5 active:shadow-none';
+
   const variants = {
-    primary: 'bg-campus-blue text-white shadow-lg shadow-blue-900/20 hover:bg-campus-accent',
-    outline: 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
-    ghost: 'text-gray-500 hover:text-campus-blue hover:bg-gray-50',
+    primary: cn(sticker, 'bg-pulpen text-white'),
+    stabilo: cn(sticker, 'bg-stabilo text-ink'),
+    outline: cn(sticker, 'bg-white text-ink'),
+    danger: cn(sticker, 'bg-spidol text-ink'),
+    success: cn(sticker, 'bg-daun text-ink'),
+    ghost: 'border-2 border-transparent text-ink/70 hover:text-ink hover:bg-ink/5',
   };
 
   const sizes = {
@@ -35,7 +42,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center rounded-lg font-bold transition-[transform,box-shadow,background-color,color] duration-100 motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-sticker',
         variants[variant],
         sizes[size],
         className

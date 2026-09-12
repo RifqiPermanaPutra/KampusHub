@@ -12,6 +12,8 @@ interface Toast {
   id: number;
   type: ToastType;
   message: string;
+  /** true saat toast sedang beranimasi keluar sebelum dibuang. */
+  leaving?: boolean;
 }
 
 interface ToastContextType {
@@ -20,10 +22,23 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+// Ikon di dalam "stiker" berwarna agar status tidak bergantung warna teks saja.
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle size={18} className="text-green-500 shrink-0" />,
-  error: <AlertCircle size={18} className="text-red-500 shrink-0" />,
-  info: <Info size={18} className="text-campus-blue shrink-0" />,
+  success: (
+    <span className="grid place-items-center w-7 h-7 rounded-md border-2 border-ink bg-daun shrink-0">
+      <CheckCircle size={16} className="text-ink" />
+    </span>
+  ),
+  error: (
+    <span className="grid place-items-center w-7 h-7 rounded-md border-2 border-ink bg-spidol shrink-0">
+      <AlertCircle size={16} className="text-ink" />
+    </span>
+  ),
+  info: (
+    <span className="grid place-items-center w-7 h-7 rounded-md border-2 border-ink bg-stabilo shrink-0">
+      <Info size={16} className="text-ink" />
+    </span>
+  ),
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -31,7 +46,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const nextId = useRef(0);
 
   const dismiss = useCallback((id: number) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    // Tandai dulu supaya sempat beranimasi keluar, baru dibuang.
+    setToasts(prev => prev.map(t => (t.id === id ? { ...t, leaving: true } : t)));
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 200);
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
@@ -51,14 +68,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={toast.id}
             role="status"
-            className="bg-white border border-gray-100 shadow-xl shadow-blue-900/10 rounded-2xl px-4 py-3 flex items-center gap-3 animate-[toast-in_0.25s_ease-out]"
+            className={`mading-card px-3 py-3 flex items-center gap-3 motion-reduce:animate-none ${
+              toast.leaving
+                ? 'animate-[toast-out_0.2s_ease-in_forwards]'
+                : 'animate-[toast-in_0.25s_cubic-bezier(0.34,1.56,0.64,1)]'
+            }`}
           >
             {ICONS[toast.type]}
-            <p className="text-sm text-gray-800 font-medium flex-1">{toast.message}</p>
+            <p className="text-sm text-ink font-semibold flex-1">{toast.message}</p>
             <button
               onClick={() => dismiss(toast.id)}
               aria-label="Tutup notifikasi"
-              className="text-gray-400 hover:text-gray-600 p-1"
+              className="text-ink/60 hover:text-ink p-1 rounded-md"
             >
               <X size={14} />
             </button>

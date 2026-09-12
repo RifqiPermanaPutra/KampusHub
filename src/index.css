@@ -1,24 +1,126 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@500;600&family=Onest:wght@400..800&display=swap');
 @import "tailwindcss";
 
+/*
+ * Tema "Mading" — majalah dinding kampus.
+ * Kertas HVS + tinta hitam, warna diambil dari alat tulis:
+ * stabilo (kuning), pulpen (biru), spidol (merah), daun (hijau), stiker (pink).
+ */
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-editorial: "Fraunces", serif;
-  
-  --color-campus-blue: #1a237e;
-  --color-campus-accent: #3949ab;
-  --color-bg-main: #f8f9fc;
+  --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: "Bricolage Grotesque", "Onest", ui-sans-serif, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-ink: #121212;
+  --color-paper: #FAFAF7;
+  --color-stabilo: #FFE14D;
+  --color-pulpen: #2F4BFF;
+  --color-spidol: #FF4F3A;
+  --color-daun: #19C37D;
+  --color-stiker: #FF9ECF;
+  --color-bg-main: #FAFAF7;
+
+  --shadow-sticker: 3px 3px 0 #121212;
+  --shadow-sticker-lg: 5px 5px 0 #121212;
 }
 
 @layer base {
   body {
-    @apply bg-bg-main font-sans text-gray-900;
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+
+  ::selection {
+    background: var(--color-stabilo);
+    color: var(--color-ink);
+  }
+
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-pulpen);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
   .editorial-title {
-    @apply font-editorial tracking-tight;
+    @apply font-editorial font-extrabold tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Kartu dasar: kertas putih, border tinta, bayangan offset */
+  .mading-card {
+    @apply rounded-xl border-2 border-ink bg-white shadow-sticker;
+  }
+
+  .mading-card-hover {
+    @apply transition-[transform,box-shadow] duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sticker-lg motion-reduce:transition-none motion-reduce:hover:translate-x-0 motion-reduce:hover:translate-y-0;
+  }
+
+  /* Catatan info (stabilo) dan peringatan (spidol) */
+  .mading-note {
+    @apply rounded-lg border-2 border-ink bg-stabilo/40 p-3 text-sm font-medium text-ink;
+  }
+
+  .mading-alert {
+    @apply rounded-lg border-2 border-spidol bg-spidol/10 p-3 text-sm font-medium text-ink;
+  }
+
+  /* Label bagian: huruf mono kecil, kontras tetap AA */
+  .eyebrow {
+    @apply font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink/70;
+  }
+
+  /* Stiker label kategori / status */
+  .sticker {
+    @apply inline-flex items-center gap-1 rounded-md border-2 border-ink bg-white px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink;
+  }
+
+  /* Cap tanggal / kode tiket */
+  .stamp {
+    @apply font-mono text-xs font-semibold tracking-wide;
+  }
+
+  /* Sapuan stabilo di belakang teks */
+  .marker {
+    background: linear-gradient(transparent 58%, var(--color-stabilo) 58%, var(--color-stabilo) 92%, transparent 92%);
+    padding: 0 0.12em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  /* Selotip di tepi atas kartu yang "ditempel" */
+  .tape {
+    position: relative;
+  }
+
+  .tape::before {
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    width: 68px;
+    height: 20px;
+    transform: translateX(-50%) rotate(-3deg);
+    background: rgb(255 255 255 / 0.72);
+    border: 1px solid rgb(18 18 18 / 0.15);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* Kertas kotak-kotak */
+  .paper-grid {
+    background-color: var(--color-paper);
+    background-image:
+      linear-gradient(rgb(18 18 18 / 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(18 18 18 / 0.055) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -30,5 +132,162 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ---------- Animasi tema Mading ---------- */
+
+@keyframes marker-in {
+  from { background-size: 0% 100%; }
+  to { background-size: 100% 100%; }
+}
+
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-spidol) 70%, transparent); }
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-spidol) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-spidol) 0%, transparent); }
+}
+
+@keyframes stamp-in {
+  0% { opacity: 0; transform: rotate(-24deg) scale(1.8); }
+  60% { opacity: 1; transform: rotate(-10deg) scale(0.94); }
+  100% { opacity: 1; transform: rotate(-12deg) scale(1); }
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: rotate(12deg) scale(0.4); }
+  70% { opacity: 1; transform: rotate(12deg) scale(1.12); }
+  100% { opacity: 1; transform: rotate(12deg) scale(1); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -150% 0; }
+  to { background-position: 250% 0; }
+}
+
+@keyframes tick-in {
+  from { opacity: 0; transform: translateY(-40%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer components {
+  /* Sapuan stabilo yang "digambar" saat halaman dibuka */
+  .marker-draw {
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    animation: marker-in 0.7s 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  /* Titik merah berdenyut untuk event yang sedang berlangsung */
+  .live-dot {
+    animation: live-pulse 1.8s ease-out infinite;
+  }
+
+  /* Cap "Selesai" yang dibubuhkan di atas poster event lampau */
+  .stamp-mark {
+    animation: stamp-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .pop-in {
+    animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  /* Masuk berurutan untuk kartu di dinding poster; delay diatur lewat --delay */
+  .rise-in {
+    animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  .tick-in {
+    animation: tick-in 0.25s ease-out both;
+  }
+
+  /* Skeleton berkilau, bukan sekadar kedip */
+  .shimmer {
+    background-image: linear-gradient(
+      100deg,
+      rgb(18 18 18 / 0.07) 30%,
+      rgb(18 18 18 / 0.14) 45%,
+      rgb(18 18 18 / 0.07) 60%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+}
+
+/* Hormati preferensi "kurangi gerakan": matikan semua animasi dan transisi */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .marker-draw {
+    background-size: 100% 100%;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer components {
+  /*
+   * Tanpa fill-mode: begitu animasi selesai, transform hilang sepenuhnya.
+   * Transform yang tersisa akan membuat containing block baru dan merusak
+   * posisi elemen `fixed` (modal, toast) di dalamnya.
+   */
+  .page-enter {
+    animation: page-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.96); }
+}
+
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes grow-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@layer components {
+  /* Batang grafik tumbuh dari titik nol saat data muncul */
+  .grow-x {
+    transform-origin: left center;
+    animation: grow-x 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  .grow-y {
+    transform-origin: bottom center;
+    animation: grow-y 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--delay, 0ms);
   }
 }
