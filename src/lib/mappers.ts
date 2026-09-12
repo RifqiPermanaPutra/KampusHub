@@ -4,7 +4,7 @@
  */
 
 import { Comment, Event, EventStatus, Notification, RSVP, RSVPStatus, Review, UserProfile, UserRole } from '../types';
-import { rsvpDocId } from './rsvp-logic';
+import { ticketCode } from './ticket-code';
 
 /*
  * Postgres memakai snake_case, aplikasi memakai camelCase. Seluruh penerjemahan
@@ -166,7 +166,7 @@ export interface RsvpRow {
  */
 export function rowToRsvp(row: RsvpRow): RSVP {
   return {
-    id: rsvpDocId(row.event_id, row.user_id),
+    id: ticketCode(row.event_id, row.user_id),
     userId: row.user_id,
     userName: row.user_name,
     eventId: row.event_id,
@@ -193,7 +193,7 @@ export interface ReviewRow {
 
 export function rowToReview(row: ReviewRow): Review {
   return {
-    id: rsvpDocId(row.event_id, row.user_id),
+    id: ticketCode(row.event_id, row.user_id),
     userId: row.user_id,
     userName: row.user_name,
     eventId: row.event_id,

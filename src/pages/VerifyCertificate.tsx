@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ShieldCheck, ShieldX, Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { parseRsvpDocId } from '../lib/rsvp-logic';
+import { parseTicketCode } from '../lib/ticket-code';
 import { usePageTitle } from '../lib/usePageTitle';
 import { rsvpService } from '../services/rsvpService';
 import { eventService } from '../services/eventService';
@@ -29,7 +29,7 @@ export function VerifyCertificate() {
         setState({ kind: 'invalid', reason: 'Kode verifikasi tidak ditemukan.' });
         return;
       }
-      const parsed = parseRsvpDocId(code);
+      const parsed = parseTicketCode(code);
       if (!parsed) {
         setState({ kind: 'invalid', reason: 'Format kode verifikasi tidak valid.' });
         return;
