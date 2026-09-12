@@ -51,7 +51,14 @@ returns trigger
 language plpgsql security definer set search_path = public
 as $$
 begin
-  if not public.is_admin() and new.role is distinct from old.role then
+  -- auth.uid() kosong berarti permintaan datang tanpa JWT: SQL Editor, berkas
+  -- migrasi, atau service_role. Ketiganya jalur tepercaya yang memang berada di
+  -- atas RLS, dan lewat jalur itulah admin pertama dibuat. Trigger tidak pernah
+  -- dilewati siapa pun — tidak seperti RLS — jadi pengecualian ini harus
+  -- dituliskan eksplisit, kalau tidak admin pertama mustahil dibuat.
+  if auth.uid() is not null
+     and not public.is_admin()
+     and new.role is distinct from old.role then
     raise exception 'Role hanya bisa diubah oleh admin';
   end if;
   return new;
@@ -90,7 +97,12 @@ returns trigger
 language plpgsql security definer set search_path = public
 as $$
 begin
-  if not public.is_admin() then
+  -- auth.uid() kosong berarti permintaan datang tanpa JWT: SQL Editor, berkas
+  -- migrasi, atau service_role. Ketiganya jalur tepercaya yang memang berada di
+  -- atas RLS, dan lewat jalur itulah admin pertama dibuat. Trigger tidak pernah
+  -- dilewati siapa pun — tidak seperti RLS — jadi pengecualian ini harus
+  -- dituliskan eksplisit, kalau tidak admin pertama mustahil dibuat.
+  if auth.uid() is not null and not public.is_admin() then
     if new.status is distinct from old.status then
       raise exception 'Hanya admin yang boleh mengubah status event';
     end if;
