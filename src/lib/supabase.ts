@@ -8,21 +8,22 @@ import { createClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!url || !anonKey) {
-  // Gagal keras dan jelas di sini, supaya tidak muncul sebagai error jaringan
-  // yang membingungkan di setiap halaman.
-  throw new Error(
-    'VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY belum diisi. ' +
-    'Salin dari Supabase Dashboard > Project Settings > API ke berkas .env.local.'
-  );
-}
+/**
+ * false kalau .env.local belum diisi. App memeriksanya dan menampilkan layar
+ * petunjuk penyiapan.
+ *
+ * Sengaja tidak melempar di sini: melempar saat modul diimpor membuat React
+ * tidak pernah ter-mount, dan yang terlihat pengguna hanya halaman putih
+ * dengan pesan yang tersembunyi di konsol.
+ */
+export const konfigurasiSupabaseAda = Boolean(url && anonKey);
 
 /*
  * Anon key memang dirancang untuk dipakai di browser dan aman berada di bundle:
  * seluruh kewenangannya dibatasi Row Level Security (lihat supabase/migrations).
  * Yang tidak boleh masuk ke sini adalah service_role key.
  */
-export const supabase = createClient(url, anonKey, {
+export const supabase = createClient(url || 'http://localhost:54321', anonKey || 'belum-diisi', {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

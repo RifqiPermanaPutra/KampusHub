@@ -10,6 +10,8 @@ import { ToastProvider } from './contexts/ToastContext';
 import { Layout } from './components/Layout';
 import { Guard } from './components/Guard';
 import { PageLoader } from './components/PageLoader';
+import { SetupNotice } from './components/SetupNotice';
+import { konfigurasiSupabaseAda } from './lib/supabase';
 
 /*
  * Tiap halaman dimuat terpisah (code splitting). Halaman berat seperti scanner
@@ -33,6 +35,10 @@ const EventAnalytics = lazy(() => import('./pages/EventAnalytics').then(m => ({ 
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate').then(m => ({ default: m.VerifyCertificate })));
 
 export default function App() {
+  // Tanpa kunci Supabase, setiap halaman hanya akan gagal memuat data. Lebih
+  // berguna menjelaskan apa yang kurang daripada menampilkan galat jaringan.
+  if (!konfigurasiSupabaseAda) return <SetupNotice />;
+
   return (
     <Router>
       <AuthProvider>
