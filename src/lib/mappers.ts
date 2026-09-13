@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Comment, Event, EventStatus, Notification, RSVP, RSVPStatus, Review, UserProfile, UserRole } from '../types';
+import { Comment, Event, EventStatus, Notification, PengajuanPanitia, RSVP, RSVPStatus, Review, UserProfile, UserRole } from '../types';
 import { ticketCode } from './ticket-code';
 
 /*
@@ -37,6 +37,7 @@ export interface ProfileRow {
   organisasi: string | null;
   jabatan: string | null;
   no_telepon: string | null;
+  pengajuan_panitia: PengajuanPanitia | null;
 }
 
 export function rowToProfile(row: ProfileRow): UserProfile {
@@ -54,6 +55,7 @@ export function rowToProfile(row: ProfileRow): UserProfile {
     organisasi: opsional(row.organisasi),
     jabatan: opsional(row.jabatan),
     noTelepon: opsional(row.no_telepon),
+    pengajuanPanitia: opsional(row.pengajuan_panitia),
   };
 }
 
@@ -72,6 +74,7 @@ export function profileToRow(profile: Partial<UserProfile>): Record<string, unkn
   if (profile.organisasi !== undefined) row.organisasi = profile.organisasi;
   if (profile.jabatan !== undefined) row.jabatan = profile.jabatan;
   if (profile.noTelepon !== undefined) row.no_telepon = profile.noTelepon;
+  if (profile.pengajuanPanitia !== undefined) row.pengajuan_panitia = profile.pengajuanPanitia;
   return row;
 }
 
@@ -92,6 +95,7 @@ export interface EventRow {
   organizer_name: string;
   capacity: number | null;
   rsvp_deadline: string | null;
+  alasan_penolakan: string | null;
   created_at: string;
   /* Empat kolom berikut hanya ada saat dibaca dari view events_with_counts. */
   attendee_count?: number;
@@ -115,6 +119,7 @@ export function rowToEvent(row: EventRow): Event {
     createdAt: row.created_at,
     capacity: opsional(row.capacity),
     rsvpDeadline: opsional(row.rsvp_deadline),
+    alasanPenolakan: opsional(row.alasan_penolakan),
     attendeeCount: opsional(row.attendee_count),
     waitlistCount: opsional(row.waitlist_count),
     ratingCount: opsional(row.rating_count),
@@ -125,7 +130,9 @@ export function rowToEvent(row: EventRow): Event {
 /**
  * Hanya kolom yang benar-benar milik tabel events yang ikut ditulis.
  * Counter dan agregat rating sengaja diabaikan: keduanya dihitung view,
- * bukan disimpan, jadi mengirimnya hanya akan ditolak database.
+ * bukan disimpan, jadi mengirimnya hanya akan ditolak database. Alasan
+ * penolakan juga tidak pernah ditulis dari sini: hanya fungsi putuskan_event
+ * yang boleh mengisinya.
  */
 export function eventToRow(event: Partial<Event>): Record<string, unknown> {
   const row: Record<string, unknown> = {};

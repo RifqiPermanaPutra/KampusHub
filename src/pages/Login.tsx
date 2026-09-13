@@ -80,6 +80,11 @@ export function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <div className="-mt-3 text-right">
+            <Link to="/lupa-sandi" className="text-sm font-bold text-pulpen hover:underline">
+              Lupa kata sandi?
+            </Link>
+          </div>
           
           {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 

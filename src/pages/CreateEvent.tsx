@@ -9,13 +9,15 @@ import { Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { aiService } from '../services/aiService';
+import { posterService } from '../services/posterService';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
+import { dariInputLokal, keInputLokal } from '../lib/waktu-lokal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { EventCard } from '../components/EventCard';
 import { CATEGORIES } from '../constants';
-import { Event } from '../types';
+import { Event, EventStatus } from '../types';
 
 const fieldLabel = 'block text-xs font-bold text-ink uppercase tracking-wider';
 const fieldBox =
@@ -32,6 +34,11 @@ export function CreateEvent() {
   const [initialLoading, setInitialLoading] = useState(isEditing);
   const [error, setError] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [mengunggahPoster, setMengunggahPoster] = useState(false);
+  // Status dan alasan penolakan event yang sedang diedit. Event yang ditolak
+  // otomatis diajukan ulang begitu perbaikannya disimpan.
+  const [statusAsal, setStatusAsal] = useState<EventStatus | null>(null);
+  const [alasanPenolakan, setAlasanPenolakan] = useState<string | undefined>();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -54,12 +61,17 @@ export function CreateEvent() {
               title: event.title,
               description: event.description,
               category: event.category,
-              date: event.date,
+              // Waktu dari database berbentuk ISO lengkap, sedangkan input
+              // datetime-local hanya menerima "yyyy-MM-ddTHH:mm". Tanpa
+              // penerjemahan ini kolom tanggal tampil kosong saat mengedit.
+              date: keInputLokal(event.date),
               location: event.location,
               posterUrl: event.posterUrl || '',
               capacity: event.capacity?.toString() || '',
-              rsvpDeadline: event.rsvpDeadline || '',
+              rsvpDeadline: keInputLokal(event.rsvpDeadline),
             });
+            setStatusAsal(event.status);
+            setAlasanPenolakan(event.alasanPenolakan);
           }
         } catch (err) {
           console.error(err);
@@ -81,13 +93,27 @@ export function CreateEvent() {
     try {
       const eventPayload = {
         ...formData,
-        capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
-        rsvpDeadline: formData.rsvpDeadline || undefined,
+        // Nilai input tidak membawa zona waktu. Tanpa diterjemahkan, Postgres
+        // membacanya sebagai UTC dan event bergeser tujuh jam dari yang dimaksud.
+        date: dariInputLokal(formData.date),
+        /*
+         * Isian kosong dikirim sebagai 0 dan teks kosong, bukan undefined.
+         * eventToRow melewati field yang undefined, sehingga kuota atau batas
+         * waktu yang dikosongkan saat mengedit tidak pernah benar-benar terhapus.
+         * Keduanya diterjemahkan menjadi NULL di sana.
+         */
+        capacity: formData.capacity ? parseInt(formData.capacity) : 0,
+        rsvpDeadline: dariInputLokal(formData.rsvpDeadline),
       };
 
       if (isEditing && id) {
         await eventService.updateEvent(id, eventPayload);
-        showToast('Perubahan event berhasil disimpan.');
+        if (statusAsal === 'rejected') {
+          await eventService.resubmitEvent(id);
+          showToast('Perbaikan tersimpan dan event diajukan ulang ke admin.');
+        } else {
+          showToast('Perubahan event berhasil disimpan.');
+        }
         navigate(`/event/${id}`);
       } else {
         await eventService.createEvent({
@@ -98,37 +124,31 @@ export function CreateEvent() {
         showToast('Event berhasil dibuat dan menunggu persetujuan admin.');
         navigate('/');
       }
-    } catch (err: any) {
-      setError(`Gagal ${isEditing ? 'memperbarui' : 'membuat'} event. Silakan coba lagi.`);
+    } catch (err) {
       console.error(err);
+      setError(err instanceof Error ? err.message : `Gagal ${isEditing ? 'memperbarui' : 'membuat'} event. Silakan coba lagi.`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Gambar disimpan sebagai data URL base64 (±33% lebih besar dari file asli)
-      // langsung di dokumen Firestore yang dibatasi 1MB. Batasi file asli ke ~700KB
-      // agar hasil base64 + field lain tetap di bawah 1MB.
-      const MAX_FILE_SIZE = 700 * 1024;
-      if (file.size > MAX_FILE_SIZE) {
-        setError('Gambar terlalu besar. Maksimal ~700KB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        // Pengaman tambahan: pastikan data URL final tidak melebihi limit dokumen.
-        if (result.length > 1024 * 1024) {
-          setError('Gambar terlalu besar setelah dikonversi. Gunakan gambar yang lebih kecil.');
-          return;
-        }
-        setError('');
-        setFormData({ ...formData, posterUrl: result });
-      };
-      reader.readAsDataURL(file);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file || !profile) return;
+
+    setError('');
+    setMengunggahPoster(true);
+    try {
+      // Ukuran dan format diperiksa posterService sebelum berkas dikirim.
+      const url = await posterService.upload(profile.uid, file);
+      setFormData(prev => ({ ...prev, posterUrl: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengunggah poster. Coba lagi.');
+    } finally {
+      setMengunggahPoster(false);
+      // Supaya memilih berkas yang sama sekali lagi tetap memicu unggahan.
+      input.value = '';
     }
   };
 
@@ -169,7 +189,7 @@ export function CreateEvent() {
     title: formData.title || 'Judul event',
     description: formData.description,
     category: formData.category,
-    date: formData.date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    date: dariInputLokal(formData.date) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     location: formData.location || 'Lokasi event',
     posterUrl: formData.posterUrl || undefined,
     status: 'pending',
@@ -178,8 +198,14 @@ export function CreateEvent() {
     createdAt: new Date().toISOString(),
     capacity,
     attendeeCount: capacity ? 0 : undefined,
-    rsvpDeadline: formData.rsvpDeadline || undefined,
+    rsvpDeadline: dariInputLokal(formData.rsvpDeadline) || undefined,
   };
+
+  const labelSimpan = !isEditing
+    ? 'Ajukan untuk Persetujuan'
+    : statusAsal === 'rejected'
+      ? 'Simpan dan Ajukan Ulang'
+      : 'Simpan Perubahan';
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -192,6 +218,14 @@ export function CreateEvent() {
           {isEditing ? 'Perbarui detail event Anda.' : 'Bagikan event organisasi Anda dengan komunitas kampus.'}
         </p>
       </div>
+
+      {isEditing && statusAsal === 'rejected' && (
+        <div className="mading-alert mb-8 space-y-1" role="status">
+          <p className="font-bold">Event ini ditolak admin.</p>
+          {alasanPenolakan && <p>Alasan: {alasanPenolakan}</p>}
+          <p>Perbaiki bagian yang disebutkan, lalu simpan. Event akan otomatis diajukan ulang untuk ditinjau.</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-10 items-start">
         <form onSubmit={handleSubmit} className="mading-card p-6 sm:p-10 space-y-8">
@@ -265,6 +299,7 @@ export function CreateEvent() {
               <Input
                 label="Kapasitas Peserta (Opsional)"
                 type="number"
+                min={1}
                 placeholder="Kosongkan jika tanpa batas"
                 value={formData.capacity}
                 onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
@@ -298,12 +333,17 @@ export function CreateEvent() {
                 <input
                   id="event-poster"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handleImageUpload}
-                  className="block w-full text-sm text-ink/70 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-2 file:border-ink file:bg-stabilo file:text-sm file:font-bold file:text-ink file:cursor-pointer hover:file:bg-white"
+                  disabled={mengunggahPoster}
+                  className="block w-full text-sm text-ink/70 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-2 file:border-ink file:bg-stabilo file:text-sm file:font-bold file:text-ink file:cursor-pointer hover:file:bg-white disabled:opacity-60"
                 />
               </div>
-              <p className="text-xs text-ink/60 mt-1">Maksimal ±700KB (JPG/PNG). Tanpa gambar, poster dibuat otomatis dari warna kategori.</p>
+              <p className="text-xs text-ink/60 mt-1" aria-live="polite">
+                {mengunggahPoster
+                  ? 'Mengunggah poster...'
+                  : 'JPG, PNG, atau WebP, maksimal 2 MB. Tanpa gambar, poster dibuat otomatis dari warna kategori.'}
+              </p>
             </div>
           </div>
 
@@ -322,9 +362,9 @@ export function CreateEvent() {
               type="submit"
               className="flex-1"
               loading={loading}
-              disabled={deadlineSetelahMulai}
+              disabled={deadlineSetelahMulai || mengunggahPoster}
             >
-              {isEditing ? 'Simpan Perubahan' : 'Ajukan untuk Persetujuan'}
+              {labelSimpan}
             </Button>
           </div>
         </form>

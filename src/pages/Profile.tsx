@@ -39,6 +39,8 @@ export function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [rekap, setRekap] = useState({ total: 0, hadir: 0, waitlist: 0 });
+  const [mengajukan, setMengajukan] = useState(false);
+  const [galatPengajuan, setGalatPengajuan] = useState('');
 
   // Rekap keikutsertaan dari pendaftaran milik pengguna.
   useEffect(() => {
@@ -56,6 +58,20 @@ export function Profile() {
   }, [profile?.uid]);
 
   if (!profile) return null;
+
+  // Mengajukan diri lagi sebagai panitia setelah pengajuan sebelumnya ditolak.
+  const handleAjukanPanitia = async () => {
+    setMengajukan(true);
+    setGalatPengajuan('');
+    try {
+      await profileService.updateProfile(profile.uid, { pengajuanPanitia: 'menunggu' });
+      await reloadProfile();
+    } catch (err) {
+      setGalatPengajuan(err instanceof Error ? err.message : 'Gagal mengajukan. Silakan coba lagi.');
+    } finally {
+      setMengajukan(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -149,6 +165,21 @@ export function Profile() {
                       ? [profile.jabatan, profile.organisasi].filter(Boolean).join(' • ') || 'Panitia Event'
                       : 'Administrator KampusHub'}
                 </p>
+                {profile.pengajuanPanitia === 'menunggu' && (
+                  <p className="mading-note" role="status">
+                    Pengajuan Anda sebagai panitia sedang menunggu persetujuan admin. Sementara itu,
+                    akun Anda tetap bisa dipakai sebagai mahasiswa.
+                  </p>
+                )}
+                {profile.pengajuanPanitia === 'ditolak' && (
+                  <div className="mading-alert space-y-3" role="status">
+                    <p>Pengajuan Anda sebagai panitia belum disetujui admin.</p>
+                    <Button size="sm" variant="outline" onClick={handleAjukanPanitia} loading={mengajukan}>
+                      Ajukan lagi
+                    </Button>
+                    {galatPengajuan && <p className="font-semibold">{galatPengajuan}</p>}
+                  </div>
+                )}
                 {profile.bio && (
                   <p className="mading-note italic">"{profile.bio}"</p>
                 )}

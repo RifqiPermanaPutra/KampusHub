@@ -6,7 +6,7 @@
 import { supabase } from '../lib/supabase';
 import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
 import { ProfileRow, profileToRow, rowToProfile } from '../lib/mappers';
-import { UserProfile } from '../types';
+import { UserProfile, UserRole } from '../types';
 
 const TABLE = 'profiles';
 
@@ -59,6 +59,29 @@ export const profileService = {
       // juga menolaknya, jadi ini hanya supaya galatnya tidak perlu terjadi.
       delete row.role;
       const { error } = await supabase.from(TABLE).update(row).eq('id', userId);
+      if (error) throw error;
+    } catch (error) {
+      throwDbError(error, OperationType.UPDATE, `${TABLE}/${userId}`);
+    }
+  },
+
+  /**
+   * Admin menyetujui atau menolak pengajuan menjadi panitia. Pengguna yang
+   * bersangkutan dikabari fungsi putuskan_panitia di database.
+   */
+  async decidePanitiaRequest(userId: string, setuju: boolean): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('putuskan_panitia', { p_user_id: userId, p_setuju: setuju });
+      if (error) throw error;
+    } catch (error) {
+      throwDbError(error, OperationType.UPDATE, `${TABLE}/${userId}`);
+    }
+  },
+
+  /** Admin mengubah peran pengguna. Database menolak admin menurunkan perannya sendiri. */
+  async changeRole(userId: string, role: UserRole): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('ubah_peran', { p_user_id: userId, p_role: role });
       if (error) throw error;
     } catch (error) {
       throwDbError(error, OperationType.UPDATE, `${TABLE}/${userId}`);

@@ -9,7 +9,7 @@ import { cn } from '../lib/utils';
 
 const OPTIONS: { value: UserRole; label: string; hint: string; icon: typeof GraduationCap }[] = [
   { value: 'mahasiswa', label: 'Mahasiswa', hint: 'Ikuti event, berinteraksi dengan yang lain, dan dapatkan kabar terbaru.', icon: GraduationCap },
-  { value: 'panitia', label: 'Panitia', hint: 'Buat dan kelola event untuk kampus Anda.', icon: Megaphone },
+  { value: 'panitia', label: 'Panitia', hint: 'Buat dan kelola event kampus, setelah pengajuan Anda disetujui admin.', icon: Megaphone },
 ];
 
 /** Pilihan tipe akun berbentuk dua stiker yang bisa ditekan. */

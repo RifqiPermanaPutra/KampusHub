@@ -25,6 +25,12 @@ export function pesanAuthError(error: unknown): string {
   if (p.includes('rate limit') || p.includes('too many requests')) {
     return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.';
   }
+  if (p.includes('should be different')) {
+    return 'Kata sandi baru harus berbeda dari kata sandi lama.';
+  }
+  if (p.includes('auth session missing') || p.includes('session not found')) {
+    return 'Tautan atur ulang sudah tidak berlaku. Minta tautan baru.';
+  }
   return pesan || 'Terjadi kesalahan saat memproses akun Anda.';
 }
 
@@ -62,6 +68,27 @@ export const authService = {
       provider: 'google',
       options: { redirectTo: window.location.origin },
     });
+    if (error) throw new Error(pesanAuthError(error));
+  },
+
+  /**
+   * Mengirim tautan atur ulang kata sandi ke email.
+   *
+   * Supabase sengaja tidak memberi tahu apakah email itu terdaftar, jadi halaman
+   * pemanggil juga harus menampilkan pesan yang sama dalam kedua keadaan.
+   * Alamat tujuannya wajib terdaftar di Authentication > URL Configuration >
+   * Redirect URLs. Kalau tidak, Supabase mengarahkan ke Site URL biasa.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/atur-sandi`,
+    });
+    if (error) throw new Error(pesanAuthError(error));
+  },
+
+  /** Menyimpan kata sandi baru untuk pengguna yang sedang masuk, termasuk lewat tautan atur ulang. */
+  async updatePassword(sandiBaru: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ password: sandiBaru });
     if (error) throw new Error(pesanAuthError(error));
   },
 

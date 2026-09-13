@@ -27,6 +27,10 @@ export const notificationService = {
   },
 
   /**
+   * Policy database hanya mengizinkan menulis notifikasi untuk diri sendiri.
+   * Notifikasi untuk pengguna lain (pendaftar baru, promosi daftar tunggu,
+   * keputusan admin, perubahan event) dibuat trigger dan fungsi di database.
+   *
    * `dedupeKey` untuk notifikasi yang tidak boleh dobel, misalnya pengingat H-1
    * yang diperiksa ulang setiap kali aplikasi dibuka. Indeks unik di database
    * yang menjamin keunikannya, jadi dua tab yang terbuka bersamaan pun aman.

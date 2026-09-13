@@ -7,6 +7,9 @@ export type UserRole = 'admin' | 'panitia' | 'mahasiswa';
 
 export type EventStatus = 'pending' | 'approved' | 'rejected';
 
+/** Pengajuan menjadi panitia. Kosong berarti tidak sedang mengajukan. */
+export type PengajuanPanitia = 'menunggu' | 'ditolak';
+
 export interface UserProfile {
   uid: string;
   name: string;
@@ -23,6 +26,8 @@ export interface UserProfile {
   organisasi?: string;
   jabatan?: string;
   noTelepon?: string;
+  /** Pengajuan menjadi panitia yang sedang menunggu, atau yang pernah ditolak admin. */
+  pengajuanPanitia?: PengajuanPanitia;
 }
 
 export interface Event {
@@ -40,6 +45,8 @@ export interface Event {
   capacity?: number;
   /** Batas waktu pendaftaran (ISO). Kosong = terbuka sampai event selesai. */
   rsvpDeadline?: string;
+  /** Diisi admin saat menolak event, supaya penyelenggara tahu apa yang harus diperbaiki. */
+  alasanPenolakan?: string;
   // Counter yang dijaga secara atomik oleh transaksi RSVP.
   // Event lama mungkin belum punya field ini (fallback: hitung dari daftar RSVP).
   attendeeCount?: number;

@@ -59,10 +59,15 @@ export function Register() {
         uid: data.user.id,
         name,
         email,
-        role,
+        // Semua pendaftar mulai sebagai mahasiswa. Memilih "Panitia" berarti
+        // mengajukan diri, dan admin yang memutuskan. Sebelumnya siapa pun bisa
+        // langsung menjadi panitia hanya dengan memilih pilihan ini.
+        role: 'mahasiswa',
         createdAt: new Date().toISOString(),
         ...(role === 'mahasiswa' ? { npm, fakultas, jurusan, angkatan } : {}),
-        ...(role === 'panitia' ? { organisasi, jabatan, noTelepon } : {}),
+        ...(role === 'panitia'
+          ? { organisasi, jabatan, noTelepon, pengajuanPanitia: 'menunggu' as const }
+          : {}),
       });
 
       /*

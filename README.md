@@ -33,7 +33,7 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 
 1. Buat project baru di [supabase.com](https://supabase.com).
 2. Buka **SQL Editor**, lalu jalankan berkas di `supabase/migrations/` **berurutan**:
-   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql`.
+   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql`.
 3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.
 4. Untuk login Google: daftarkan OAuth client di Google Cloud Console, lalu isi
    Client ID dan Secret di **Authentication → Providers → Google**.
@@ -45,6 +45,9 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 
 > Saat demo, matikan **Authentication → Providers → Email → Confirm email** supaya
 > akun uji bisa langsung dipakai tanpa menunggu email konfirmasi.
+
+> Supaya fitur **lupa kata sandi** bekerja, tambahkan `http://localhost:3000/atur-sandi` di
+> **Authentication → URL Configuration → Redirect URLs**.
 
 ## Catatan Arsitektur
 

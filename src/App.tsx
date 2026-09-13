@@ -33,6 +33,8 @@ const SavedEvents = lazy(() => import('./pages/SavedEvents').then(m => ({ defaul
 const TicketScanner = lazy(() => import('./pages/TicketScanner').then(m => ({ default: m.TicketScanner })));
 const EventAnalytics = lazy(() => import('./pages/EventAnalytics').then(m => ({ default: m.EventAnalytics })));
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate').then(m => ({ default: m.VerifyCertificate })));
+const LupaSandi = lazy(() => import('./pages/LupaSandi').then(m => ({ default: m.LupaSandi })));
+const AturSandi = lazy(() => import('./pages/AturSandi').then(m => ({ default: m.AturSandi })));
 
 export default function App() {
   // Tanpa kunci Supabase, setiap halaman hanya akan gagal memuat data. Lebih
@@ -48,6 +50,9 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/lupa-sandi" element={<LupaSandi />} />
+          {/* Tidak dibungkus Guard: sesinya baru terpasang dari token di URL. */}
+          <Route path="/atur-sandi" element={<AturSandi />} />
           <Route path="/complete-profile" element={<Guard><CompleteProfile /></Guard>} />
 
           {/* Protected Routes */}

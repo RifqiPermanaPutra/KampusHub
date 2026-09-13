@@ -11,9 +11,12 @@ import { RoleToggle } from '../components/RoleToggle';
 export function CompleteProfile() {
   const { user, profile, loading: authLoading, reloadProfile } = useAuth();
   const navigate = useNavigate();
-  
+
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>('mahasiswa');
+  const [organisasi, setOrganisasi] = useState('');
+  const [jabatan, setJabatan] = useState('');
+  const [noTelepon, setNoTelepon] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -34,10 +37,10 @@ export function CompleteProfile() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
       await profileService.createProfile({
         uid: user.id,
@@ -45,8 +48,13 @@ export function CompleteProfile() {
         // mendaftar dengan email belum tentu, jadi tetap ada nilai cadangan.
         name: name || (user.user_metadata?.full_name as string | undefined) || 'Pengguna Baru',
         email: user.email ?? '',
-        role,
+        // Semua akun mulai sebagai mahasiswa. Memilih "Panitia" berarti
+        // mengajukan diri, dan admin yang memutuskan.
+        role: 'mahasiswa',
         createdAt: new Date().toISOString(),
+        ...(role === 'panitia'
+          ? { organisasi, jabatan, noTelepon, pengajuanPanitia: 'menunggu' as const }
+          : {}),
       });
 
       // Muat ulang profil di AuthContext
@@ -77,6 +85,7 @@ export function CompleteProfile() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             label="Nama Lengkap"
+            autoComplete="name"
             placeholder="Contoh: Budi Santoso"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -84,6 +93,34 @@ export function CompleteProfile() {
           />
 
           <RoleToggle value={role} onChange={setRole} />
+
+          {role === 'panitia' && (
+            <>
+              <Input
+                label="Nama Organisasi / UKM"
+                placeholder="Contoh: BEM Fasilkom"
+                value={organisasi}
+                onChange={(e) => setOrganisasi(e.target.value)}
+                required
+              />
+              <Input
+                label="Jabatan"
+                placeholder="Contoh: Ketua Pelaksana"
+                value={jabatan}
+                onChange={(e) => setJabatan(e.target.value)}
+                required
+              />
+              <Input
+                label="Nomor Telepon / WhatsApp"
+                type="tel"
+                autoComplete="tel"
+                placeholder="Contoh: 08123456789"
+                value={noTelepon}
+                onChange={(e) => setNoTelepon(e.target.value)}
+                required
+              />
+            </>
+          )}
 
           {error && <div className="mading-alert" role="alert">{error}</div>}
 

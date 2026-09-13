@@ -84,6 +84,34 @@ export const eventService = {
     }
   },
 
+  /**
+   * Menyetujui atau menolak event. Hanya admin, dan alasan wajib saat menolak.
+   * Notifikasi ke penyelenggara dibuat fungsi putuskan_event di database, jadi
+   * hasilnya sama dari halaman mana pun admin memutuskan.
+   */
+  async decideEvent(id: string, setuju: boolean, alasan?: string): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('putuskan_event', {
+        p_event_id: id,
+        p_setuju: setuju,
+        p_alasan: alasan ?? null,
+      });
+      if (error) throw error;
+    } catch (error) {
+      throwDbError(error, OperationType.UPDATE, `${TABLE}/${id}`);
+    }
+  },
+
+  /** Mengajukan ulang event yang ditolak, setelah penyelenggara memperbaikinya. */
+  async resubmitEvent(id: string): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('ajukan_ulang_event', { p_event_id: id });
+      if (error) throw error;
+    } catch (error) {
+      throwDbError(error, OperationType.UPDATE, `${TABLE}/${id}`);
+    }
+  },
+
   async getEventsByOrganizer(organizerId: string): Promise<Event[]> {
     try {
       const { data, error } = await supabase

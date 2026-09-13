@@ -25,6 +25,7 @@ const barisEvent: EventRow = {
   organizer_name: 'BEM',
   capacity: null,
   rsvp_deadline: null,
+  alasan_penolakan: null,
   created_at: '2026-09-01T00:00:00+00:00',
 };
 
@@ -161,6 +162,7 @@ describe('rowToProfile & profileToRow', () => {
     organisasi: null,
     jabatan: null,
     no_telepon: null,
+    pengajuan_panitia: null,
   };
 
   it('memetakan id menjadi uid', () => {
@@ -182,5 +184,39 @@ describe('rowToProfile & profileToRow', () => {
     expect(row.fakultas).toBe('Teknik');
     // Kolom yang NULL tidak ikut dikirim, jadi tidak menimpa apa pun.
     expect('bio' in row).toBe(false);
+  });
+});
+
+describe('kolom moderasi', () => {
+  it('memetakan alasan penolakan event', () => {
+    const event = rowToEvent({ ...barisEvent, status: 'rejected', alasan_penolakan: 'Lokasi belum jelas.' });
+    expect(event.alasanPenolakan).toBe('Lokasi belum jelas.');
+    expect(rowToEvent(barisEvent).alasanPenolakan).toBeUndefined();
+  });
+
+  it('tidak pernah menulis alasan penolakan dari sisi aplikasi', () => {
+    // Hanya fungsi putuskan_event di database yang boleh mengisinya.
+    expect(eventToRow({ title: 'X', alasanPenolakan: 'isi palsu' })).toEqual({ title: 'X' });
+  });
+
+  it('memetakan pengajuan panitia bolak-balik', () => {
+    const profil = rowToProfile({
+      id: 'u2',
+      name: 'Sari',
+      email: 's@kampus.ac.id',
+      role: 'mahasiswa',
+      created_at: '2026-01-01T00:00:00+00:00',
+      bio: null,
+      npm: null,
+      fakultas: null,
+      jurusan: null,
+      angkatan: null,
+      organisasi: 'BEM',
+      jabatan: 'Ketua',
+      no_telepon: null,
+      pengajuan_panitia: 'menunggu',
+    });
+    expect(profil.pengajuanPanitia).toBe('menunggu');
+    expect(profileToRow({ pengajuanPanitia: 'menunggu' })).toEqual({ pengajuan_panitia: 'menunggu' });
   });
 });

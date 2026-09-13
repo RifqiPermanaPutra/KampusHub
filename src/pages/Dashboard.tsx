@@ -6,14 +6,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
-import { Event, UserProfile } from '../types';
+import { Event, UserProfile, UserRole } from '../types';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { StatusPill } from '../components/ui/StatusPill';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Check, X, Eye, Edit, Trash2, AlertTriangle, Users, Calendar, CalendarCheck, UserCheck, Percent } from 'lucide-react';
-import { rsvpService } from '../services/rsvpService';
 import { CampusAnalytics } from '../lib/analytics';
 import { StatCard } from '../components/ui/StatCard';
 import { SimpleBarChart } from '../components/charts/SimpleBarChart';
@@ -21,6 +19,7 @@ import { profileService } from '../services/profileService';
 import { analyticsService } from '../services/analyticsService';
 import { Avatar } from '../components/ui/Avatar';
 import { Modal } from '../components/ui/Modal';
+import { RejectEventModal } from '../components/RejectEventModal';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { cn } from '../lib/utils';
@@ -30,6 +29,12 @@ import { PhaseTag } from '../components/ui/PhaseTag';
 const th = 'px-6 py-3.5 eyebrow text-ink whitespace-nowrap';
 const td = 'px-6 py-5';
 
+const LABEL_PERAN: Record<UserRole, string> = {
+  mahasiswa: 'Mahasiswa',
+  panitia: 'Panitia',
+  admin: 'Admin',
+};
+
 export function Dashboard() {
   const { profile } = useAuth();
   const { showToast } = useToast();
@@ -38,9 +43,12 @@ export function Dashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [eventToReject, setEventToReject] = useState<Event | null>(null);
   const [activeTab, setActiveTab] = useState<'events' | 'users'>('events');
   const [actionError, setActionError] = useState('');
   const [kampus, setKampus] = useState<CampusAnalytics | null>(null);
+  // uid pengguna yang sedang diproses, supaya tombol dan pilihannya dikunci sementara.
+  const [sedangDiproses, setSedangDiproses] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -69,15 +77,70 @@ export function Dashboard() {
     loadData();
   }, [profile]);
 
-  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+  const handleApprove = async (event: Event) => {
     setActionError('');
     try {
-      await eventService.updateEvent(id, { status });
-      setEvents(events.map(e => e.id === id ? { ...e, status } : e));
-      showToast(status === 'approved' ? 'Event disetujui.' : 'Event ditolak.', status === 'approved' ? 'success' : 'info');
+      await eventService.decideEvent(event.id, true);
+      setEvents(prev => prev.map((e): Event =>
+        e.id === event.id ? { ...e, status: 'approved', alasanPenolakan: undefined } : e
+      ));
+      showToast('Event disetujui dan penyelenggara sudah dikabari.');
     } catch (err) {
       console.error(err);
-      setActionError('Gagal memperbarui status event. Silakan coba lagi.');
+      setActionError(err instanceof Error ? err.message : 'Gagal menyetujui event. Silakan coba lagi.');
+    }
+  };
+
+  // Galatnya sengaja tidak ditangkap di sini supaya tampil di dalam dialog penolakan.
+  const handleReject = async (alasan: string) => {
+    if (!eventToReject) return;
+    const id = eventToReject.id;
+    await eventService.decideEvent(id, false, alasan);
+    setEvents(prev => prev.map((e): Event =>
+      e.id === id ? { ...e, status: 'rejected', alasanPenolakan: alasan } : e
+    ));
+    setEventToReject(null);
+    showToast('Event ditolak dan alasannya sudah dikirim ke penyelenggara.', 'info');
+  };
+
+  const handleDecidePanitia = async (user: UserProfile, setuju: boolean) => {
+    setActionError('');
+    setSedangDiproses(user.uid);
+    try {
+      await profileService.decidePanitiaRequest(user.uid, setuju);
+      setUsers(prev => prev.map((u): UserProfile => {
+        if (u.uid !== user.uid) return u;
+        return setuju
+          ? { ...u, role: 'panitia', pengajuanPanitia: undefined }
+          : { ...u, pengajuanPanitia: 'ditolak' };
+      }));
+      showToast(
+        setuju ? `${user.name} sekarang terdaftar sebagai panitia.` : `Pengajuan ${user.name} ditolak.`,
+        setuju ? 'success' : 'info'
+      );
+    } catch (err) {
+      console.error(err);
+      setActionError(err instanceof Error ? err.message : 'Gagal memproses pengajuan. Silakan coba lagi.');
+    } finally {
+      setSedangDiproses(null);
+    }
+  };
+
+  const handleChangeRole = async (user: UserProfile, role: UserRole) => {
+    if (role === user.role) return;
+    setActionError('');
+    setSedangDiproses(user.uid);
+    try {
+      await profileService.changeRole(user.uid, role);
+      setUsers(prev => prev.map((u): UserProfile =>
+        u.uid === user.uid ? { ...u, role, pengajuanPanitia: undefined } : u
+      ));
+      showToast(`Peran ${user.name} diubah menjadi ${LABEL_PERAN[role]}.`);
+    } catch (err) {
+      console.error(err);
+      setActionError(err instanceof Error ? err.message : 'Gagal mengubah peran. Silakan coba lagi.');
+    } finally {
+      setSedangDiproses(null);
     }
   };
 
@@ -111,6 +174,7 @@ export function Dashboard() {
     rejected: events.filter(e => e.status === 'rejected').length,
   };
 
+  const pengajuanMenunggu = users.filter(u => u.pengajuanPanitia === 'menunggu');
 
   /** Tombol aksi per event, dipakai di tabel desktop maupun kartu di HP. */
   const eventActions = (event: Event, canManage: boolean) => (
@@ -130,7 +194,7 @@ export function Dashboard() {
       {profile?.role === 'admin' && event.status === 'pending' && (
         <>
           <Button
-            onClick={() => handleAction(event.id, 'approved')}
+            onClick={() => handleApprove(event)}
             size="sm"
             variant="success"
             className="p-2"
@@ -140,7 +204,7 @@ export function Dashboard() {
             <Check size={16} />
           </Button>
           <Button
-            onClick={() => handleAction(event.id, 'rejected')}
+            onClick={() => setEventToReject(event)}
             size="sm"
             variant="danger"
             className="p-2"
@@ -165,6 +229,12 @@ export function Dashboard() {
       )}
     </div>
   );
+
+  /** Alasan penolakan ditampilkan di bawah judul supaya penyelenggara tidak perlu membuka event. */
+  const alasanDitolak = (event: Event) =>
+    event.status === 'rejected' && event.alasanPenolakan ? (
+      <p className="text-xs text-ink/80 mt-1 max-w-md">Alasan ditolak: {event.alasanPenolakan}</p>
+    ) : null;
 
   const canManageEvent = (event: Event) =>
     profile?.role === 'admin' || (profile?.role === 'panitia' && profile?.uid === event.organizerId);
@@ -198,6 +268,9 @@ export function Dashboard() {
               >
                 <Icon size={18} />
                 {label}
+                {key === 'users' && pengajuanMenunggu.length > 0 && (
+                  <span className="sticker bg-stiker !px-1.5 !py-0">{pengajuanMenunggu.length}</span>
+                )}
               </button>
             ))}
           </div>
@@ -247,7 +320,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {actionError && <div className="mading-alert">{actionError}</div>}
+      {actionError && <div className="mading-alert" role="alert">{actionError}</div>}
 
       {activeTab === 'events' ? (
         <div className="space-y-4">
@@ -259,6 +332,7 @@ export function Dashboard() {
                   <div className="min-w-0">
                     <p className="font-bold text-ink">{event.title}</p>
                     <p className="text-xs text-ink/60">{event.category}</p>
+                    {alasanDitolak(event)}
                   </div>
                   <StatusPill status={event.status} />
                 </div>
@@ -289,6 +363,7 @@ export function Dashboard() {
                       <td className={td}>
                         <p className="font-bold text-ink line-clamp-1">{event.title}</p>
                         <p className="text-xs text-ink/60">{event.category}</p>
+                        {alasanDitolak(event)}
                       </td>
                       <td className={cn(td, 'whitespace-nowrap')}>
                         <p className="stamp text-ink/70">{format(new Date(event.date), 'dd.MM.yyyy')}</p>
@@ -316,45 +391,125 @@ export function Dashboard() {
           )}
         </div>
       ) : (
-        <div className="mading-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-stabilo/30 border-b-2 border-ink">
-                  <th className={th}>Pengguna</th>
-                  <th className={th}>Tipe Akun</th>
-                  <th className={th}>Tanggal Bergabung</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-ink/10">
-                {users.map((user) => (
-                  <tr key={user.uid} className="hover:bg-stabilo/10 transition-colors motion-reduce:transition-none">
-                    <td className={td}>
-                      <div className="flex items-center gap-3">
-                        <Avatar nama={user.name} className="w-10 h-10 text-sm" />
-                        <div className="min-w-0">
-                          <p className="font-bold text-ink line-clamp-1">{user.name}</p>
-                          <p className="text-xs text-ink/60">{user.email}</p>
-                        </div>
+        <div className="space-y-8">
+          {pengajuanMenunggu.length > 0 && (
+            <section className="space-y-4" aria-label="Pengajuan panitia">
+              <h3 className="eyebrow">Pengajuan panitia · {pengajuanMenunggu.length}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {pengajuanMenunggu.map((user) => (
+                  <div key={user.uid} className="mading-card p-5 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar nama={user.name} className="w-10 h-10 text-sm" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-ink line-clamp-1">{user.name}</p>
+                        <p className="text-xs text-ink/60 break-all">{user.email}</p>
                       </div>
-                    </td>
-                    <td className={cn(td, 'whitespace-nowrap')}>
-                      <Badge variant={user.role === 'admin' ? 'red' : user.role === 'panitia' ? 'purple' : 'yellow'}>
-                        {user.role}
-                      </Badge>
-                    </td>
-                    <td className={cn(td, 'stamp text-ink/70 whitespace-nowrap')}>
-                      {format(new Date(user.createdAt), 'dd.MM.yyyy')}
-                    </td>
-                  </tr>
+                    </div>
+                    <dl className="text-sm space-y-1">
+                      <div className="flex gap-2">
+                        <dt className="text-ink/60 w-24 shrink-0">Organisasi</dt>
+                        <dd className="font-semibold text-ink">{user.organisasi || '-'}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="text-ink/60 w-24 shrink-0">Jabatan</dt>
+                        <dd className="font-semibold text-ink">{user.jabatan || '-'}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="text-ink/60 w-24 shrink-0">Telepon</dt>
+                        <dd className="font-semibold text-ink">{user.noTelepon || '-'}</dd>
+                      </div>
+                    </dl>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        size="sm"
+                        variant="success"
+                        onClick={() => handleDecidePanitia(user, true)}
+                        disabled={sedangDiproses === user.uid}
+                      >
+                        <Check size={16} className="mr-1.5" />
+                        Setujui
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDecidePanitia(user, false)}
+                        disabled={sedangDiproses === user.uid}
+                      >
+                        <X size={16} className="mr-1.5" />
+                        Tolak
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          {users.length === 0 && (
-            <div className="p-16 text-center text-ink/60">Belum ada pengguna.</div>
+              </div>
+            </section>
           )}
+
+          <div className="mading-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-stabilo/30 border-b-2 border-ink">
+                    <th className={th}>Pengguna</th>
+                    <th className={th}>Tipe Akun</th>
+                    <th className={th}>Tanggal Bergabung</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y-2 divide-ink/10">
+                  {users.map((user) => {
+                    const diriSendiri = user.uid === profile?.uid;
+                    return (
+                      <tr key={user.uid} className="hover:bg-stabilo/10 transition-colors motion-reduce:transition-none">
+                        <td className={td}>
+                          <div className="flex items-center gap-3">
+                            <Avatar nama={user.name} className="w-10 h-10 text-sm" />
+                            <div className="min-w-0">
+                              <p className="font-bold text-ink line-clamp-1">{user.name}</p>
+                              <p className="text-xs text-ink/60">{user.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className={cn(td, 'whitespace-nowrap')}>
+                          <label className="sr-only" htmlFor={`peran-${user.uid}`}>Tipe akun {user.name}</label>
+                          <select
+                            id={`peran-${user.uid}`}
+                            value={user.role}
+                            // Database juga menolaknya, tapi lebih jelas dicegah di sini.
+                            disabled={diriSendiri || sedangDiproses === user.uid}
+                            title={diriSendiri ? 'Anda tidak bisa mengubah tipe akun Anda sendiri' : undefined}
+                            onChange={(e) => handleChangeRole(user, e.target.value as UserRole)}
+                            className="rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink outline-none transition-shadow focus:shadow-sticker disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none"
+                          >
+                            {(Object.keys(LABEL_PERAN) as UserRole[]).map((peran) => (
+                              <option key={peran} value={peran}>{LABEL_PERAN[peran]}</option>
+                            ))}
+                          </select>
+                          {user.pengajuanPanitia === 'menunggu' && (
+                            <span className="sticker bg-stabilo ml-2">Mengajukan panitia</span>
+                          )}
+                        </td>
+                        <td className={cn(td, 'stamp text-ink/70 whitespace-nowrap')}>
+                          {format(new Date(user.createdAt), 'dd.MM.yyyy')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {users.length === 0 && (
+              <div className="p-16 text-center text-ink/60">Belum ada pengguna.</div>
+            )}
+          </div>
         </div>
+      )}
+
+      {eventToReject && (
+        <RejectEventModal
+          judulEvent={eventToReject.title}
+          onBatal={() => setEventToReject(null)}
+          onKirim={handleReject}
+        />
       )}
 
       {eventToDelete && (
@@ -366,7 +521,7 @@ export function Dashboard() {
               </div>
               <div>
                 <h3 className="editorial-title text-2xl text-ink mb-2">Hapus event?</h3>
-                <p className="text-sm text-ink/70">Tindakan ini tidak dapat dibatalkan. Event dan semua pendaftarannya akan dihapus permanen.</p>
+                <p className="text-sm text-ink/70">Tindakan ini tidak dapat dibatalkan. Event dan semua pendaftarannya akan dihapus permanen, dan peserta yang sudah mendaftar akan dikabari.</p>
               </div>
             </div>
             <div className="flex gap-3">

@@ -13,7 +13,6 @@ import { eventService } from '../services/eventService';
 import { rsvpService } from '../services/rsvpService';
 import { savedService } from '../services/savedService';
 import { commentService } from '../services/commentService';
-import { notificationService } from '../services/notificationService';
 import { Event, RSVP, Comment } from '../types';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -21,6 +20,7 @@ import { Modal } from '../components/ui/Modal';
 import { StatusPill } from '../components/ui/StatusPill';
 import { Avatar } from '../components/ui/Avatar';
 import { ReviewSection } from '../components/ReviewSection';
+import { RejectEventModal } from '../components/RejectEventModal';
 import { getQuotaSticker } from '../components/EventCard';
 import { getCategoryStyle } from '../constants';
 import { EVENT_DURATION_MS, countdownParts, getEventPhase } from '../lib/event-phase';
@@ -137,6 +137,7 @@ export function EventDetail() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [tersimpan, setTersimpan] = useState(false);
   const [savingBookmark, setSavingBookmark] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
 
   usePageTitle(event?.title);
 
@@ -220,16 +221,7 @@ export function EventDetail() {
         : 'Pendaftaran berhasil! Tiket tersedia di halaman Pendaftaran Saya.',
         status === 'waitlist' ? 'info' : 'success');
 
-      // Send notification to the organizer
-      if (profile.uid !== event.organizerId) {
-        await notificationService.sendNotification({
-          userId: event.organizerId,
-          eventId: event.id,
-          message: status === 'waitlist'
-            ? `${profile.name} masuk daftar tunggu event Anda "${event.title}".`
-            : `${profile.name} mendaftar ke event Anda "${event.title}".`
-        });
-      }
+      // Penyelenggara dikabari trigger notif_pendaftar_baru di database.
     } catch (err) {
       console.error(err);
       setActionError('Gagal mendaftar. Silakan coba lagi.');
@@ -243,20 +235,13 @@ export function EventDetail() {
     setActionLoading(true);
     setActionError('');
     try {
-      const promoted = await rsvpService.cancelRSVP(event.id);
+      await rsvpService.cancelRSVP(event.id);
       setMyRsvp(null);
       const r = await rsvpService.getRSVPsForEvent(event.id);
       setRsvps(r);
       showToast('Pendaftaran Anda telah dibatalkan.', 'info');
 
-      // Kabari peserta waitlist yang naik jadi terdaftar
-      if (promoted) {
-        await notificationService.sendNotification({
-          userId: promoted.userId,
-          eventId: event.id,
-          message: `Kabar baik! Anda naik dari daftar tunggu dan kini terdaftar di event "${event.title}".`
-        });
-      }
+      // Peserta daftar tunggu yang naik dikabari fungsi cancel_rsvp di database.
     } catch (err) {
       console.error(err);
       setActionError('Gagal membatalkan pendaftaran. Silakan coba lagi.');
@@ -301,41 +286,36 @@ export function EventDetail() {
       });
       setNewComment('');
 
-      // Notify organizer of a new comment
-      if (profile.uid !== event.organizerId) {
-        await notificationService.sendNotification({
-          userId: event.organizerId,
-          eventId: event.id,
-          message: `${profile.name} mengomentari "${event.title}": "${newComment.substring(0, 30)}${newComment.length > 30 ? '...' : ''}"`
-        });
-      }
+      // Penyelenggara dikabari trigger notif_komentar_baru di database.
     } catch (err) {
       console.error(err);
       setCommentError('Gagal mengirim komentar. Silakan coba lagi.');
     }
   };
 
-  const handleAdminDecision = async (status: 'approved' | 'rejected') => {
+  const handleApprove = async () => {
     if (!profile || profile.role !== 'admin' || !event) return;
     setActionLoading(true);
     setActionError('');
     try {
-      await eventService.updateEvent(event.id, { status });
-      setEvent({ ...event, status });
-      showToast(status === 'approved' ? 'Event disetujui.' : 'Event ditolak.', status === 'approved' ? 'success' : 'info');
-
-      // Notify the organizer about the admin decision
-      await notificationService.sendNotification({
-        userId: event.organizerId,
-        eventId: event.id,
-        message: `Admin telah ${status === 'approved' ? 'menyetujui' : 'menolak'} event Anda "${event.title}".`
-      });
+      await eventService.decideEvent(event.id, true);
+      setEvent({ ...event, status: 'approved', alasanPenolakan: undefined });
+      showToast('Event disetujui dan penyelenggara sudah dikabari.');
     } catch (err) {
       console.error(err);
-      setActionError('Gagal memperbarui status event. Silakan coba lagi.');
+      setActionError(err instanceof Error ? err.message : 'Gagal menyetujui event. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Galatnya sengaja tidak ditangkap di sini supaya tampil di dalam dialog penolakan.
+  const handleReject = async (alasan: string) => {
+    if (!event) return;
+    await eventService.decideEvent(event.id, false, alasan);
+    setEvent({ ...event, status: 'rejected', alasanPenolakan: alasan });
+    setShowRejectModal(false);
+    showToast('Event ditolak dan alasannya sudah dikirim ke penyelenggara.', 'info');
   };
 
   const handleShare = async () => {
@@ -437,6 +417,26 @@ export function EventDetail() {
             </span>
           </div>
         </header>
+
+        {canManage && event.status === 'pending' && (
+          <div className="mading-note" role="status">
+            Event ini belum tampil di mading. Menunggu persetujuan admin.
+          </div>
+        )}
+
+        {canManage && event.status === 'rejected' && (
+          <div className="mading-alert space-y-3" role="status">
+            <p className="font-bold">Event ini ditolak admin.</p>
+            {event.alasanPenolakan && <p>Alasan: {event.alasanPenolakan}</p>}
+            {profile?.uid === event.organizerId && (
+              <Link to={`/edit-event/${event.id}`} className="inline-block">
+                <Button size="sm" variant="outline" tabIndex={-1}>
+                  Perbaiki dan ajukan ulang
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
 
         {event.posterUrl && (
           <figure className={cn('mading-card bg-white p-2 -rotate-1 motion-reduce:rotate-0', isPast && 'grayscale opacity-90')}>
@@ -681,6 +681,14 @@ export function EventDetail() {
             </div>
           </div>
 
+          {showRejectModal && (
+            <RejectEventModal
+              judulEvent={event.title}
+              onBatal={() => setShowRejectModal(false)}
+              onKirim={handleReject}
+            />
+          )}
+
           {/* Admin / Organizer Controls */}
           {canManage && (
             <div className="pt-5 border-t-2 border-dashed border-ink/20 space-y-3">
@@ -691,10 +699,10 @@ export function EventDetail() {
 
               {profile?.role === 'admin' && event.status === 'pending' && (
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="success" onClick={() => handleAdminDecision('approved')} disabled={actionLoading}>
+                  <Button variant="success" onClick={handleApprove} disabled={actionLoading}>
                     Setujui
                   </Button>
-                  <Button variant="danger" onClick={() => handleAdminDecision('rejected')} disabled={actionLoading}>
+                  <Button variant="danger" onClick={() => setShowRejectModal(true)} disabled={actionLoading}>
                     Tolak
                   </Button>
                 </div>
