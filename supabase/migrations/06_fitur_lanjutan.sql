@@ -662,6 +662,18 @@ create policy "panitia mengunggah poster" on storage.objects
     and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+-- Policy select ini wajib ada agar policy hapus di bawahnya berguna. API
+-- Storage membaca objeknya dulu sebelum menghapus, jadi tanpa izin membaca,
+-- remove() tidak menghapus apa pun dan juga tidak melaporkan galat.
+-- Poster tetap bisa dilihat semua orang lewat URL publik bucket.
+drop policy if exists "pemilik melihat posternya" on storage.objects;
+create policy "pemilik melihat posternya" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'posters'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 drop policy if exists "pemilik menghapus posternya" on storage.objects;
 create policy "pemilik menghapus posternya" on storage.objects
   for delete to authenticated
