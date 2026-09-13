@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { profileService } from '../services/profileService';
 import { UserProfile } from '../types';
 import { withTimeout } from '../lib/with-timeout';
+import { buatPenandaPermintaan } from '../lib/permintaan-terbaru';
 
 /** Batas tunggu permintaan profil saat boot, supaya app tidak berhenti di layar loading. */
 const PROFILE_TIMEOUT_MS = 8000;
@@ -35,17 +36,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileFailed, setProfileFailed] = useState(false);
+  // Hanya jawaban permintaan profil yang paling akhir dimulai yang boleh dipakai.
+  const penanda = useRef(buatPenandaPermintaan());
 
   const fetchProfile = useCallback(async (currentUser: User) => {
+    const nomor = penanda.current.mulai();
     try {
       const hasil = await withTimeout(
         profileService.getProfile(currentUser.id),
         PROFILE_TIMEOUT_MS,
         'Server tidak merespons saat memuat profil'
       );
+      // Jawaban yang sudah didahului permintaan lain dibuang. Saat mendaftar,
+      // permintaan pertama dikirim sebelum baris profil ditulis dan jawabannya
+      // kosong; kalau tibanya belakangan, ia akan menimpa profil yang benar.
+      if (!penanda.current.masihTerbaru(nomor)) return;
       setProfile(hasil);
       setProfileFailed(false);
     } catch (error) {
+      if (!penanda.current.masihTerbaru(nomor)) return;
       // Penting: kegagalan jaringan tidak boleh dianggap "profil belum dibuat",
       // karena itu akan mengarahkan pengguna lama ke form Lengkapi Profil dan
       // menimpa datanya (termasuk menurunkan role admin).
@@ -57,11 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /*
+   * Membaca sesi yang sedang aktif langsung dari klien Supabase, bukan dari
+   * state `user`. Halaman Daftar memanggil fungsi ini dari handler yang dibuat
+   * sebelum akun terbentuk; kalau bergantung pada `user` dari render itu,
+   * nilainya masih null dan pemanggilan ini diam-diam tidak melakukan apa pun.
+   * Itulah sebabnya pendaftar sempat dilempar ke Lengkapi Profil.
+   */
   const reloadProfile = useCallback(async () => {
-    if (user) {
-      await fetchProfile(user);
+    const { data } = await supabase.auth.getSession();
+    const sesi = data.session?.user;
+    if (sesi) {
+      await fetchProfile(sesi);
     }
-  }, [user, fetchProfile]);
+  }, [fetchProfile]);
 
   useEffect(() => {
     let batal = false;
@@ -105,6 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
           });
         } else {
+          // Keluar juga membatalkan permintaan profil yang mungkin masih berjalan.
+          penanda.current.mulai();
           setProfile(null);
           setProfileFailed(false);
           clearTimeout(bootTimer);
