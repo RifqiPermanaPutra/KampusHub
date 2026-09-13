@@ -143,7 +143,7 @@ export function CreateEvent() {
       );
       setFormData(prev => ({ ...prev, description }));
     } catch (err: any) {
-      setError(err.message || 'Gagal generate deskripsi dengan AI.');
+      setError(err.message || 'Gagal menulis deskripsi dengan AI.');
     } finally {
       setAiLoading(false);
     }
@@ -189,7 +189,7 @@ export function CreateEvent() {
           {isEditing ? 'Edit Event' : <>Buat event <span className="marker">baru</span></>}
         </h2>
         <p className="text-ink/70">
-          {isEditing ? 'Update detail event Anda.' : 'Bagikan event organisasi Anda dengan komunitas kampus.'}
+          {isEditing ? 'Perbarui detail event Anda.' : 'Bagikan event organisasi Anda dengan komunitas kampus.'}
         </p>
       </div>
 
@@ -215,10 +215,10 @@ export function CreateEvent() {
                     size="sm"
                     disabled={aiLoading || !formData.title.trim()}
                     onClick={handleGenerateDescription}
-                    title={!formData.title.trim() ? 'Isi judul event dulu' : 'Generate deskripsi dengan AI'}
+                    title={!formData.title.trim() ? 'Isi judul event dulu' : 'Tulis deskripsi dengan AI'}
                   >
                     <Sparkles size={14} className={aiLoading ? 'mr-1.5 animate-pulse' : 'mr-1.5'} />
-                    {aiLoading ? 'Menulis...' : 'Generate dengan AI'}
+                    {aiLoading ? 'Menulis...' : 'Tulis dengan AI'}
                   </Button>
                 )}
               </div>

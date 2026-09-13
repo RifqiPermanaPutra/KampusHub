@@ -92,7 +92,7 @@ export function CompleteProfile() {
             className="w-full py-4 text-lg"
             loading={loading}
           >
-            {loading ? 'Menyimpan...' : 'Selesaikan Profile'}
+            {loading ? 'Menyimpan...' : 'Selesaikan Profil'}
           </Button>
         </form>
     </AuthShell>

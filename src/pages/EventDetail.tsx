@@ -594,7 +594,7 @@ export function EventDetail() {
             }
           >
             {myRsvp
-              ? (myRsvp.status === 'waitlist' ? 'Keluar dari Daftar Tunggu' : 'Batalkan RSVP')
+              ? (myRsvp.status === 'waitlist' ? 'Keluar dari Daftar Tunggu' : 'Batalkan Pendaftaran')
               : registrationClosed
                 ? registrationButtonLabel(regState)
                 : isFull

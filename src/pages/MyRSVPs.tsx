@@ -115,7 +115,7 @@ function TicketModal({ rsvp, holderName, onClose }: { rsvp: RsvpWithEvent; holde
           </div>
         ) : phase === 'past' ? (
           <div className="rounded-lg border-2 border-ink bg-ink p-3 text-sm font-semibold text-white">
-            Event sudah selesai dan tiket ini tidak bisa dipakai check-in lagi.
+            Event sudah selesai dan Anda belum tercatat hadir. Kalau Anda sebenarnya datang, minta panitia mencatat check-in susulan supaya sertifikat bisa diunduh.
           </div>
         ) : (
           <div className="mading-note">

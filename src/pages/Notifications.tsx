@@ -121,7 +121,7 @@ export function Notifications() {
               <CheckCircle2 size={26} className="text-ink" />
             </div>
             <p className="editorial-title text-2xl text-ink">Semua sudah terbaca</p>
-            <p className="text-ink/70">Notifikasi pendaftaran, pengingat H-1, dan balasan panitia akan muncul di sini.</p>
+            <p className="text-ink/70">Pengingat H-1, kabar dari daftar tunggu, dan aktivitas di event yang Anda kelola akan muncul di sini.</p>
           </div>
         )}
       </div>

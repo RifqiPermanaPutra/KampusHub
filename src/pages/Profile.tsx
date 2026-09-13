@@ -172,13 +172,11 @@ export function Profile() {
               </div>
             </dl>
 
-            <div className="space-y-3">
-              <h3 className="eyebrow">Status Akun</h3>
-              <span className="sticker bg-daun normal-case text-sm tracking-normal font-sans font-bold px-3 py-1.5">
-                <Shield size={16} />
-                Akun {profile.role} terverifikasi
-              </span>
-            </div>
+            {/*
+              * Di sini sebelumnya ada stiker "Akun {role} terverifikasi", padahal
+              * aplikasi ini tidak punya proses verifikasi akun. Role sudah tampil
+              * sebagai badge di sebelah nama, jadi bagian itu dihapus.
+              */}
           </div>
 
           {/* Stats/Badge Side */}

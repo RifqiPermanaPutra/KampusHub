@@ -322,7 +322,7 @@ export function Dashboard() {
               <thead>
                 <tr className="bg-stabilo/30 border-b-2 border-ink">
                   <th className={th}>Pengguna</th>
-                  <th className={th}>Role</th>
+                  <th className={th}>Tipe Akun</th>
                   <th className={th}>Tanggal Bergabung</th>
                 </tr>
               </thead>
