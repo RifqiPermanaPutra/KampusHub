@@ -252,11 +252,12 @@ export function EventDetail() {
 
   const handleExportCSV = () => {
     const csvContent = [
-      ['Nama', 'Status', 'Fakultas', 'Angkatan', 'Tanggal Daftar'],
+      ['Nama', 'Status', 'Fakultas', 'Program Studi', 'Angkatan', 'Tanggal Daftar'],
       ...rsvps.map(r => [
         r.userName,
         r.status || 'registered',
         r.fakultas || '-',
+        r.jurusan || '-',
         r.angkatan || '-',
         new Date(r.createdAt).toLocaleString()
       ])

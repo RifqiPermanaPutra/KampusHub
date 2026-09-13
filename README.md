@@ -33,7 +33,7 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 
 1. Buat project baru di [supabase.com](https://supabase.com).
 2. Buka **SQL Editor**, lalu jalankan berkas di `supabase/migrations/` **berurutan**:
-   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql`.
+   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql` → `07_prodi.sql`.
 3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.
 4. Untuk login Google: daftarkan OAuth client di Google Cloud Console, lalu isi
    Client ID dan Secret di **Authentication → Providers → Google**.

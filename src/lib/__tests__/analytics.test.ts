@@ -59,3 +59,39 @@ describe('buildEventAnalytics', () => {
     ]);
   });
 });
+
+import type { RSVP as RsvpUji } from '../../types';
+
+describe('buildEventAnalytics: program studi', () => {
+  const peserta = (id: string, jurusan: string | undefined, status: RsvpUji['status'] = 'registered'): RsvpUji => ({
+    id,
+    userId: id,
+    userName: id,
+    eventId: 'e1',
+    createdAt: '2026-09-01T00:00:00Z',
+    status,
+    fakultas: 'Teknik',
+    jurusan,
+    angkatan: '2023',
+  });
+
+  it('mengelompokkan peserta terdaftar per program studi, terbanyak lebih dulu', () => {
+    const a = buildEventAnalytics([
+      peserta('a', 'Teknik Informatika'),
+      peserta('b', 'Teknik Informatika'),
+      peserta('c', 'Teknik Sipil'),
+    ]);
+    expect(a.byJurusan[0]).toEqual({ label: 'Teknik Informatika', count: 2 });
+    expect(a.byJurusan.find(j => j.label === 'Teknik Sipil')?.count).toBe(1);
+  });
+
+  it('mencatat pendaftaran lama tanpa program studi sebagai Tidak diketahui', () => {
+    const a = buildEventAnalytics([peserta('a', undefined), peserta('b', 'Teknik Sipil')]);
+    expect(a.byJurusan.find(j => j.label === 'Tidak diketahui')?.count).toBe(1);
+  });
+
+  it('tidak menghitung peserta daftar tunggu', () => {
+    const a = buildEventAnalytics([peserta('a', 'Teknik Sipil'), peserta('b', 'Teknik Sipil', 'waitlist')]);
+    expect(a.byJurusan).toEqual([{ label: 'Teknik Sipil', count: 1 }]);
+  });
+});

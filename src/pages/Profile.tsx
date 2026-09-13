@@ -9,7 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Calendar, Mail, Shield, User as UserIcon, Edit2, Check, X, Ticket, UserCheck, Hourglass } from 'lucide-react';
+import { Calendar, Mail, Shield, Edit2, Check, X, Ticket, UserCheck, Hourglass } from 'lucide-react';
 import { rsvpService } from '../services/rsvpService';
 import { useCountUp } from '../lib/useCountUp';
 import { format } from 'date-fns';
@@ -39,6 +39,13 @@ export function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [rekap, setRekap] = useState({ total: 0, hadir: 0, waitlist: 0 });
+
+  // Pengajuan menjadi panitia. Diisi ulang dari profil supaya pengguna yang
+  // pernah ditolak tidak perlu mengetik semuanya dari awal.
+  const [formPanitia, setFormPanitia] = useState(false);
+  const [organisasi, setOrganisasi] = useState(profile?.organisasi || '');
+  const [jabatan, setJabatan] = useState(profile?.jabatan || '');
+  const [noTelepon, setNoTelepon] = useState(profile?.noTelepon || '');
   const [mengajukan, setMengajukan] = useState(false);
   const [galatPengajuan, setGalatPengajuan] = useState('');
 
@@ -59,15 +66,27 @@ export function Profile() {
 
   if (!profile) return null;
 
-  // Mengajukan diri lagi sebagai panitia setelah pengajuan sebelumnya ditolak.
-  const handleAjukanPanitia = async () => {
+  /*
+   * Mengajukan diri sebagai panitia. Pilihan ini dulu ada di halaman Daftar,
+   * sehingga semua pendaftar ikut ditanya organisasi dan nomor telepon padahal
+   * hampir semuanya mahasiswa. Admin dikabari trigger database, dan peran baru
+   * berubah setelah admin menyetujui dari Dashboard.
+   */
+  const handleAjukanPanitia = async (e: React.FormEvent) => {
+    e.preventDefault();
     setMengajukan(true);
     setGalatPengajuan('');
     try {
-      await profileService.updateProfile(profile.uid, { pengajuanPanitia: 'menunggu' });
+      await profileService.updateProfile(profile.uid, {
+        organisasi: organisasi.trim(),
+        jabatan: jabatan.trim(),
+        noTelepon: noTelepon.trim(),
+        pengajuanPanitia: 'menunggu',
+      });
       await reloadProfile();
+      setFormPanitia(false);
     } catch (err) {
-      setGalatPengajuan(err instanceof Error ? err.message : 'Gagal mengajukan. Silakan coba lagi.');
+      setGalatPengajuan(err instanceof Error ? err.message : 'Gagal mengirim pengajuan. Silakan coba lagi.');
     } finally {
       setMengajukan(false);
     }
@@ -93,6 +112,8 @@ export function Profile() {
     setBio(profile.bio || '');
     setIsEditing(false);
   };
+
+  const bolehMengajukan = profile.role === 'mahasiswa' && profile.pengajuanPanitia !== 'menunggu';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -165,21 +186,74 @@ export function Profile() {
                       ? [profile.jabatan, profile.organisasi].filter(Boolean).join(' • ') || 'Panitia Event'
                       : 'Administrator KampusHub'}
                 </p>
+
                 {profile.pengajuanPanitia === 'menunggu' && (
                   <p className="mading-note" role="status">
                     Pengajuan Anda sebagai panitia sedang menunggu persetujuan admin. Sementara itu,
                     akun Anda tetap bisa dipakai sebagai mahasiswa.
                   </p>
                 )}
-                {profile.pengajuanPanitia === 'ditolak' && (
+
+                {bolehMengajukan && (formPanitia ? (
+                  <form onSubmit={handleAjukanPanitia} className="mading-card p-5 space-y-4">
+                    <div>
+                      <h3 className="font-editorial font-extrabold text-lg text-ink">Ajukan jadi panitia</h3>
+                      <p className="text-sm text-ink/70">
+                        Admin meninjau pengajuan ini. Setelah disetujui, Anda bisa membuat dan mengelola event.
+                      </p>
+                    </div>
+                    <Input
+                      label="Nama Organisasi / UKM"
+                      placeholder="Contoh: BEM Fasilkom"
+                      value={organisasi}
+                      onChange={(e) => setOrganisasi(e.target.value)}
+                      required
+                    />
+                    <Input
+                      label="Jabatan"
+                      placeholder="Contoh: Ketua Pelaksana"
+                      value={jabatan}
+                      onChange={(e) => setJabatan(e.target.value)}
+                      required
+                    />
+                    <Input
+                      label="Nomor Telepon / WhatsApp"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="Contoh: 08123456789"
+                      value={noTelepon}
+                      onChange={(e) => setNoTelepon(e.target.value)}
+                      required
+                    />
+                    <p className="text-xs text-ink/60">
+                      Nomor telepon hanya bisa dilihat admin untuk memastikan pengajuan ini, tidak ditampilkan ke pengguna lain.
+                    </p>
+                    {galatPengajuan && <p className="mading-alert" role="alert">{galatPengajuan}</p>}
+                    <div className="flex flex-wrap gap-3">
+                      <Button type="submit" loading={mengajukan}>
+                        Kirim Pengajuan
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setFormPanitia(false)} disabled={mengajukan}>
+                        Batal
+                      </Button>
+                    </div>
+                  </form>
+                ) : profile.pengajuanPanitia === 'ditolak' ? (
                   <div className="mading-alert space-y-3" role="status">
                     <p>Pengajuan Anda sebagai panitia belum disetujui admin.</p>
-                    <Button size="sm" variant="outline" onClick={handleAjukanPanitia} loading={mengajukan}>
+                    <Button size="sm" variant="outline" onClick={() => setFormPanitia(true)}>
                       Ajukan lagi
                     </Button>
-                    {galatPengajuan && <p className="font-semibold">{galatPengajuan}</p>}
                   </div>
-                )}
+                ) : (
+                  <div className="mading-note flex flex-wrap items-center justify-between gap-3">
+                    <span>Ingin menyelenggarakan event? Ajukan diri sebagai panitia.</span>
+                    <Button size="sm" variant="outline" onClick={() => setFormPanitia(true)}>
+                      Ajukan jadi panitia
+                    </Button>
+                  </div>
+                ))}
+
                 {profile.bio && (
                   <p className="mading-note italic">"{profile.bio}"</p>
                 )}
@@ -230,9 +304,8 @@ export function Profile() {
               <p className="editorial-title text-2xl text-ink">Data yang dibagikan</p>
               <p className="text-sm text-ink/80 font-medium">
                 Saat Anda mendaftar ke sebuah event, nama Anda muncul di daftar peserta event itu dan bisa
-                dilihat pengguna lain yang membukanya. Panitia event juga menerima
-                fakultas dan angkatan Anda untuk rekap kehadiran. Email dan nomor
-                telepon tidak dibagikan.
+                dilihat pengguna lain yang membukanya. Panitia event juga menerima fakultas, program studi,
+                dan angkatan Anda untuk rekap kehadiran. Email dan nomor telepon tidak dibagikan ke panitia event.
               </p>
             </div>
           </div>

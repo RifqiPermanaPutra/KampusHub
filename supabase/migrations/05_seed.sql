@@ -18,7 +18,8 @@ declare
   v_peserta  uuid[];
   v_uid      uuid;
   v_i        integer := 0;
-  v_fakultas text[] := array['Teknik', 'Ekonomi', 'Hukum', 'Ilmu Komputer', 'Kedokteran'];
+  -- Harus nama fakultas yang benar-benar ada, sesuai src/lib/fakultas.ts.
+  v_fakultas text[] := array['Teknik', 'Ekonomi dan Bisnis', 'Hukum', 'FKIP', 'Psikologi'];
   v_angkatan text[] := array['2021', '2022', '2023', '2024'];
 begin
   -- Penyelenggara: panitia kalau ada, kalau tidak admin, kalau tidak profil mana pun.

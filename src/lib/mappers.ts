@@ -161,6 +161,7 @@ export interface RsvpRow {
   status: RSVPStatus;
   checked_in_at: string | null;
   fakultas: string | null;
+  jurusan: string | null;
   angkatan: string | null;
   created_at: string;
 }
@@ -181,6 +182,7 @@ export function rowToRsvp(row: RsvpRow): RSVP {
     status: row.status,
     checkedInAt: opsional(row.checked_in_at),
     fakultas: opsional(row.fakultas),
+    jurusan: opsional(row.jurusan),
     angkatan: opsional(row.angkatan),
   };
 }

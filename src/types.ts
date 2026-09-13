@@ -68,6 +68,7 @@ export interface RSVP {
   checkedInAt?: string;
   // Snapshot profil saat RSVP, untuk analitik demografi
   fakultas?: string;
+  jurusan?: string;
   angkatan?: string;
 }
 

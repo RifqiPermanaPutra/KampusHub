@@ -144,6 +144,18 @@ export function EventAnalytics() {
       </div>
 
       <section className="mading-card p-6 sm:p-8">
+        <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Peserta per Program Studi</h3>
+        {analytics.byJurusan.some(j => j.label !== 'Tidak diketahui') ? (
+          <SimpleBarChart data={analytics.byJurusan} color="bg-daun" />
+        ) : (
+          // Program studi baru ikut tercatat sejak halaman Daftar menanyakannya,
+          // jadi event lama wajar belum punya datanya. Grafik dengan satu batang
+          // "Tidak diketahui" tidak memberi informasi apa pun.
+          <p className="text-sm text-ink/70">Program studi belum tercatat untuk peserta event ini.</p>
+        )}
+      </section>
+
+      <section className="mading-card p-6 sm:p-8">
         <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Timeline Pendaftaran</h3>
         <TimelineChart data={analytics.timeline} />
       </section>

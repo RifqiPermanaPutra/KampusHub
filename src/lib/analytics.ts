@@ -13,12 +13,13 @@ export interface EventAnalytics {
   /** Persentase check-in terhadap peserta terdaftar (0–100). */
   attendanceRate: number;
   byFakultas: { label: string; count: number }[];
+  byJurusan: { label: string; count: number }[];
   byAngkatan: { label: string; count: number }[];
   /** Jumlah pendaftaran per hari (kunci ISO yyyy-mm-dd), terurut naik. */
   timeline: { date: string; count: number }[];
 }
 
-function countBy(rsvps: RSVP[], key: 'fakultas' | 'angkatan') {
+function countBy(rsvps: RSVP[], key: 'fakultas' | 'jurusan' | 'angkatan') {
   const counts = new Map<string, number>();
   for (const r of rsvps) {
     const label = r[key] || 'Tidak diketahui';
@@ -52,6 +53,7 @@ export function buildEventAnalytics(rsvps: RSVP[]): EventAnalytics {
       ? Math.round((checkedIn / registeredList.length) * 100)
       : 0,
     byFakultas: countBy(registeredList, 'fakultas'),
+    byJurusan: countBy(registeredList, 'jurusan'),
     byAngkatan: countBy(registeredList, 'angkatan'),
     timeline,
   };

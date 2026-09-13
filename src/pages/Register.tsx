@@ -11,33 +11,41 @@ import { profileService } from '../services/profileService';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { UserRole } from '../types';
+import { Select } from '../components/ui/Select';
 import { AuthShell, AuthDivider } from '../components/AuthShell';
-import { RoleToggle } from '../components/RoleToggle';
 import { useAuth } from '../contexts/AuthContext';
+import { DAFTAR_FAKULTAS, pilihanAngkatan, prodiDariFakultas } from '../lib/fakultas';
 
+/*
+ * Pendaftaran hanya menanyakan data yang benar-benar dipakai aplikasi: nama
+ * (tiket, sertifikat, daftar peserta), serta fakultas, program studi, dan
+ * angkatan (analitik peserta dan CSV panitia).
+ *
+ * Yang sengaja tidak ditanyakan lagi:
+ * - NPM: sebelumnya wajib diisi, tapi tidak dipakai di mana pun.
+ * - Pilihan tipe akun dan data panitia: hampir semua pendaftar adalah
+ *   mahasiswa, dan menjadi panitia harus disetujui admin. Pengajuannya kini
+ *   dilakukan dari halaman Profil.
+ */
 export function Register() {
   usePageTitle('Daftar');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('mahasiswa');
-
-  // Mahasiswa states
-  const [npm, setNpm] = useState('');
   const [fakultas, setFakultas] = useState('');
   const [jurusan, setJurusan] = useState('');
   const [angkatan, setAngkatan] = useState('');
-
-  // Panitia states
-  const [organisasi, setOrganisasi] = useState('');
-  const [jabatan, setJabatan] = useState('');
-  const [noTelepon, setNoTelepon] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { reloadProfile } = useAuth();
+
+  const gantiFakultas = (baru: string) => {
+    setFakultas(baru);
+    // Prodi dari fakultas sebelumnya tidak berlaku lagi.
+    setJurusan('');
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,15 +67,11 @@ export function Register() {
         uid: data.user.id,
         name,
         email,
-        // Semua pendaftar mulai sebagai mahasiswa. Memilih "Panitia" berarti
-        // mengajukan diri, dan admin yang memutuskan. Sebelumnya siapa pun bisa
-        // langsung menjadi panitia hanya dengan memilih pilihan ini.
         role: 'mahasiswa',
         createdAt: new Date().toISOString(),
-        ...(role === 'mahasiswa' ? { npm, fakultas, jurusan, angkatan } : {}),
-        ...(role === 'panitia'
-          ? { organisasi, jabatan, noTelepon, pengajuanPanitia: 'menunggu' as const }
-          : {}),
+        fakultas,
+        jurusan,
+        angkatan,
       });
 
       /*
@@ -104,6 +108,8 @@ export function Register() {
       setLoading(false);
     }
   };
+
+  const daftarProdi = prodiDariFakultas(fakultas);
 
   return (
     <AuthShell
@@ -152,8 +158,6 @@ export function Register() {
         <AuthDivider label="Atau daftar dengan email" />
 
         <form onSubmit={handleRegister} className="space-y-6">
-          <RoleToggle value={role} onChange={setRole} />
-
           <Input
             label="Nama Lengkap"
             autoComplete="name"
@@ -181,73 +185,41 @@ export function Register() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-
-          {role === 'mahasiswa' && (
-            <>
-              <Input
-                label="NPM"
-                placeholder="Contoh: 12345678"
-                value={npm}
-                onChange={(e) => setNpm(e.target.value)}
-                required
-              />
-              <Input
-                label="Fakultas"
-                placeholder="Contoh: Ilmu Komputer"
-                value={fakultas}
-                onChange={(e) => setFakultas(e.target.value)}
-                required
-              />
-              <Input
-                label="Jurusan"
-                placeholder="Contoh: Teknik Informatika"
-                value={jurusan}
-                onChange={(e) => setJurusan(e.target.value)}
-                required
-              />
-              <Input
-                label="Tahun Angkatan"
-                placeholder="Contoh: 2023"
-                value={angkatan}
-                onChange={(e) => setAngkatan(e.target.value)}
-                required
-              />
-            </>
-          )}
-
-          {role === 'panitia' && (
-            <>
-              <Input
-                label="Nama Organisasi / UKM"
-                placeholder="Contoh: BEM Fasilkom"
-                value={organisasi}
-                onChange={(e) => setOrganisasi(e.target.value)}
-                required
-              />
-              <Input
-                label="Jabatan"
-                placeholder="Contoh: Ketua Pelaksana"
-                value={jabatan}
-                onChange={(e) => setJabatan(e.target.value)}
-                required
-              />
-              <Input
-                label="Nomor Telepon / WhatsApp"
-                type="tel"
-                autoComplete="tel"
-                placeholder="Contoh: 08123456789"
-                value={noTelepon}
-                onChange={(e) => setNoTelepon(e.target.value)}
-                required
-              />
-            </>
-          )}
+          <Select
+            label="Fakultas"
+            kosong="Pilih fakultas"
+            pilihan={DAFTAR_FAKULTAS}
+            value={fakultas}
+            onChange={(e) => gantiFakultas(e.target.value)}
+            required
+          />
+          <Select
+            label="Program Studi"
+            kosong={fakultas ? 'Pilih program studi' : 'Pilih fakultas dulu'}
+            pilihan={daftarProdi}
+            value={jurusan}
+            onChange={(e) => setJurusan(e.target.value)}
+            disabled={!fakultas}
+            required
+          />
+          <Select
+            label="Tahun Angkatan"
+            kosong="Pilih tahun angkatan"
+            pilihan={pilihanAngkatan(new Date().getFullYear())}
+            value={angkatan}
+            onChange={(e) => setAngkatan(e.target.value)}
+            required
+          />
 
           {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 
           <Button type="submit" className="w-full py-4 text-lg" loading={loading}>
             Buat Akun
           </Button>
+
+          <p className="text-xs text-center text-ink/60">
+            Ingin menyelenggarakan event? Setelah mendaftar, ajukan diri sebagai panitia dari halaman Profil.
+          </p>
         </form>
 
         <p className="text-center text-sm text-ink/70">

@@ -4,35 +4,24 @@ import { profileService } from '../services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { UserRole } from '../types';
+import { Select } from '../components/ui/Select';
 import { AuthShell } from '../components/AuthShell';
-import { RoleToggle } from '../components/RoleToggle';
+import { DAFTAR_FAKULTAS, pilihanAngkatan, prodiDariFakultas } from '../lib/fakultas';
 
 /*
  * Halaman ini terutama dilewati pengguna yang masuk dengan Google: Supabase
  * masuk lewat alih-halaman, jadi isian di halaman Daftar tidak ikut terbawa.
- * Karena itu kolomnya harus sama lengkap dengan halaman Daftar. Sebelumnya
- * mahasiswa yang masuk lewat Google tidak pernah ditanya fakultas dan
- * angkatannya, sehingga analitik mencatat mereka sebagai "Tidak diketahui".
+ * Karena itu kolomnya harus sama dengan halaman Daftar: nama, fakultas,
+ * program studi, dan angkatan. Pengajuan menjadi panitia dilakukan dari Profil.
  */
 export function CompleteProfile() {
   const { user, profile, loading: authLoading, reloadProfile } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
-  const [role, setRole] = useState<UserRole>('mahasiswa');
-
-  // Kolom mahasiswa
-  const [npm, setNpm] = useState('');
   const [fakultas, setFakultas] = useState('');
   const [jurusan, setJurusan] = useState('');
   const [angkatan, setAngkatan] = useState('');
-
-  // Kolom panitia
-  const [organisasi, setOrganisasi] = useState('');
-  const [jabatan, setJabatan] = useState('');
-  const [noTelepon, setNoTelepon] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,6 +39,12 @@ export function CompleteProfile() {
     }
   }, [profile, authLoading, navigate]);
 
+  const gantiFakultas = (baru: string) => {
+    setFakultas(baru);
+    // Prodi dari fakultas sebelumnya tidak berlaku lagi.
+    setJurusan('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -64,14 +59,11 @@ export function CompleteProfile() {
         // mendaftar dengan email belum tentu, jadi tetap ada nilai cadangan.
         name: name || (user.user_metadata?.full_name as string | undefined) || 'Pengguna Baru',
         email: user.email ?? '',
-        // Semua akun mulai sebagai mahasiswa. Memilih "Panitia" berarti
-        // mengajukan diri, dan admin yang memutuskan.
         role: 'mahasiswa',
         createdAt: new Date().toISOString(),
-        ...(role === 'mahasiswa' ? { npm, fakultas, jurusan, angkatan } : {}),
-        ...(role === 'panitia'
-          ? { organisasi, jabatan, noTelepon, pengajuanPanitia: 'menunggu' as const }
-          : {}),
+        fakultas,
+        jurusan,
+        angkatan,
       });
 
       // Muat ulang profil di AuthContext
@@ -100,8 +92,6 @@ export function CompleteProfile() {
       subtitle="Tinggal satu langkah. Isi detail akun Anda di bawah ini."
     >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <RoleToggle value={role} onChange={setRole} />
-
           <Input
             label="Nama Lengkap"
             autoComplete="name"
@@ -110,67 +100,31 @@ export function CompleteProfile() {
             onChange={(e) => setName(e.target.value)}
             required
           />
-
-          {role === 'mahasiswa' && (
-            <>
-              <Input
-                label="NPM"
-                placeholder="Contoh: 12345678"
-                value={npm}
-                onChange={(e) => setNpm(e.target.value)}
-                required
-              />
-              <Input
-                label="Fakultas"
-                placeholder="Contoh: Ilmu Komputer"
-                value={fakultas}
-                onChange={(e) => setFakultas(e.target.value)}
-                required
-              />
-              <Input
-                label="Jurusan"
-                placeholder="Contoh: Teknik Informatika"
-                value={jurusan}
-                onChange={(e) => setJurusan(e.target.value)}
-                required
-              />
-              <Input
-                label="Tahun Angkatan"
-                placeholder="Contoh: 2023"
-                value={angkatan}
-                onChange={(e) => setAngkatan(e.target.value)}
-                required
-              />
-            </>
-          )}
-
-          {role === 'panitia' && (
-            <>
-              <Input
-                label="Nama Organisasi / UKM"
-                placeholder="Contoh: BEM Fasilkom"
-                value={organisasi}
-                onChange={(e) => setOrganisasi(e.target.value)}
-                required
-              />
-              <Input
-                label="Jabatan"
-                placeholder="Contoh: Ketua Pelaksana"
-                value={jabatan}
-                onChange={(e) => setJabatan(e.target.value)}
-                required
-              />
-              <Input
-                label="Nomor Telepon / WhatsApp"
-                type="tel"
-                autoComplete="tel"
-                placeholder="Contoh: 08123456789"
-                value={noTelepon}
-                onChange={(e) => setNoTelepon(e.target.value)}
-                required
-              />
-            </>
-          )}
+          <Select
+            label="Fakultas"
+            kosong="Pilih fakultas"
+            pilihan={DAFTAR_FAKULTAS}
+            value={fakultas}
+            onChange={(e) => gantiFakultas(e.target.value)}
+            required
+          />
+          <Select
+            label="Program Studi"
+            kosong={fakultas ? 'Pilih program studi' : 'Pilih fakultas dulu'}
+            pilihan={prodiDariFakultas(fakultas)}
+            value={jurusan}
+            onChange={(e) => setJurusan(e.target.value)}
+            disabled={!fakultas}
+            required
+          />
+          <Select
+            label="Tahun Angkatan"
+            kosong="Pilih tahun angkatan"
+            pilihan={pilihanAngkatan(new Date().getFullYear())}
+            value={angkatan}
+            onChange={(e) => setAngkatan(e.target.value)}
+            required
+          />
 
           {error && <div className="mading-alert" role="alert">{error}</div>}
 
@@ -181,6 +135,10 @@ export function CompleteProfile() {
           >
             {loading ? 'Menyimpan...' : 'Selesaikan Profil'}
           </Button>
+
+          <p className="text-xs text-center text-ink/60">
+            Ingin menyelenggarakan event? Setelah ini, ajukan diri sebagai panitia dari halaman Profil.
+          </p>
         </form>
     </AuthShell>
   );
