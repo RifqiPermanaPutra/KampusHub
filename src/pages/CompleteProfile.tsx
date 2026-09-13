@@ -8,15 +8,31 @@ import { UserRole } from '../types';
 import { AuthShell } from '../components/AuthShell';
 import { RoleToggle } from '../components/RoleToggle';
 
+/*
+ * Halaman ini terutama dilewati pengguna yang masuk dengan Google: Supabase
+ * masuk lewat alih-halaman, jadi isian di halaman Daftar tidak ikut terbawa.
+ * Karena itu kolomnya harus sama lengkap dengan halaman Daftar. Sebelumnya
+ * mahasiswa yang masuk lewat Google tidak pernah ditanya fakultas dan
+ * angkatannya, sehingga analitik mencatat mereka sebagai "Tidak diketahui".
+ */
 export function CompleteProfile() {
   const { user, profile, loading: authLoading, reloadProfile } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>('mahasiswa');
+
+  // Kolom mahasiswa
+  const [npm, setNpm] = useState('');
+  const [fakultas, setFakultas] = useState('');
+  const [jurusan, setJurusan] = useState('');
+  const [angkatan, setAngkatan] = useState('');
+
+  // Kolom panitia
   const [organisasi, setOrganisasi] = useState('');
   const [jabatan, setJabatan] = useState('');
   const [noTelepon, setNoTelepon] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,6 +68,7 @@ export function CompleteProfile() {
         // mengajukan diri, dan admin yang memutuskan.
         role: 'mahasiswa',
         createdAt: new Date().toISOString(),
+        ...(role === 'mahasiswa' ? { npm, fakultas, jurusan, angkatan } : {}),
         ...(role === 'panitia'
           ? { organisasi, jabatan, noTelepon, pengajuanPanitia: 'menunggu' as const }
           : {}),
@@ -80,9 +97,11 @@ export function CompleteProfile() {
   return (
     <AuthShell
       title={<>Lengkapi <span className="marker">pendaftaran</span></>}
-      subtitle="Mohon lengkapi beberapa detail untuk menyelesaikan akun Anda."
+      subtitle="Tinggal satu langkah. Isi detail akun Anda di bawah ini."
     >
         <form onSubmit={handleSubmit} className="space-y-6">
+          <RoleToggle value={role} onChange={setRole} />
+
           <Input
             label="Nama Lengkap"
             autoComplete="name"
@@ -92,7 +111,38 @@ export function CompleteProfile() {
             required
           />
 
-          <RoleToggle value={role} onChange={setRole} />
+          {role === 'mahasiswa' && (
+            <>
+              <Input
+                label="NPM"
+                placeholder="Contoh: 12345678"
+                value={npm}
+                onChange={(e) => setNpm(e.target.value)}
+                required
+              />
+              <Input
+                label="Fakultas"
+                placeholder="Contoh: Ilmu Komputer"
+                value={fakultas}
+                onChange={(e) => setFakultas(e.target.value)}
+                required
+              />
+              <Input
+                label="Jurusan"
+                placeholder="Contoh: Teknik Informatika"
+                value={jurusan}
+                onChange={(e) => setJurusan(e.target.value)}
+                required
+              />
+              <Input
+                label="Tahun Angkatan"
+                placeholder="Contoh: 2023"
+                value={angkatan}
+                onChange={(e) => setAngkatan(e.target.value)}
+                required
+              />
+            </>
+          )}
 
           {role === 'panitia' && (
             <>

@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { googleBolehDicoba } from '../lib/pengaturan-auth';
 
 /** Pesan galat auth Supabase diterjemahkan ke kalimat yang berguna bagi pengguna. */
 export function pesanAuthError(error: unknown): string {
@@ -64,11 +65,34 @@ export const authService = {
    * seperti pada versi sebelumnya.
    */
   async signInWithGoogle(): Promise<void> {
+    /*
+     * Status provider diperiksa lebih dulu karena signInWithOAuth tidak pernah
+     * melaporkan galat lewat JavaScript: ia langsung memindahkan browser ke
+     * Supabase. Kalau Google belum aktif, pengguna mendarat di halaman JSON
+     * mentah milik Supabase dan terjebak di luar aplikasi.
+     */
+    if (!(await authService.googleAktif())) {
+      throw new Error('Login Google belum diaktifkan. Untuk sementara, gunakan email dan kata sandi.');
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
     });
     if (error) throw new Error(pesanAuthError(error));
+  },
+
+  /** Membaca status provider Google dari pengaturan Auth publik proyek Supabase. */
+  async googleAktif(): Promise<boolean> {
+    try {
+      const respons = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+      });
+      if (!respons.ok) return true;
+      return googleBolehDicoba(await respons.json());
+    } catch {
+      return true;
+    }
   },
 
   /**
