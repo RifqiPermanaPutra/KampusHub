@@ -1,4 +1,4 @@
-# KampusHub - Platform Event Kampus
+# KampusHub: Platform Event Kampus
 
 KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di lingkungan kampus. Sistem ini menghubungkan penyelenggara acara (panitia/organisasi) dengan peserta (mahasiswa), lengkap dengan fitur RSVP dan tiket elektronik berbasis QR Code.
 
@@ -13,6 +13,13 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 - Styling: Tailwind CSS v4, Framer Motion
 - Backend & Database: Supabase (PostgreSQL, Auth, Row Level Security, Realtime)
 - Utilities: `html5-qrcode` (Scanner), `qrcode.react` (Generator)
+
+## Dokumentasi Capstone
+
+- [Project Definition Document](docs/project-definition.md): masalah, scope, requirement,
+  pembagian tugas, backlog, risiko, dan kriteria keberhasilan.
+- [Arsitektur Sistem](docs/arsitektur.md): diagram arsitektur, ERD, fungsi dan trigger database,
+  serta flowchart alur utama.
 
 ## Cara Menjalankan (Run Locally)
 
@@ -61,7 +68,7 @@ karena tiga keterbatasan yang tercatat berasal dari model datanya, bukan dari ko
 | RSVP ditulis ganda ke dua koleksi dan bisa berbeda status | Satu tabel dengan kunci `(event_id, user_id)` |
 
 Kuota, daftar tunggu, batas waktu pendaftaran, dan syarat "hanya peserta hadir yang boleh
-mengulas" sekarang ditegakkan di server lewat fungsi `plpgsql` dan policy RLS — sebelumnya
+mengulas" sekarang ditegakkan di server lewat fungsi `plpgsql` dan policy RLS. Sebelumnya
 sebagian hanya diperiksa di browser.
 
 ## Fitur Tambahan
