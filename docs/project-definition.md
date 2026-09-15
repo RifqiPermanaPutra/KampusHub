@@ -15,7 +15,7 @@ Versi 1.0, 15 September 2026
 | Program studi | Teknik Informatika, Fakultas Teknik, Universitas Islam Riau |
 | Dosen pengampu | _(diisi kelompok)_ |
 | Nomor kelompok | _(diisi kelompok)_ |
-| Repository | https://github.com/RifqiPermanaPutra/EventHub-Kampus |
+| Repository | https://github.com/RifqiPermanaPutra/KampusHub |
 
 | No | Peran | Nama | NPM | Tanggung jawab |
 |---|---|---|---|---|
@@ -229,6 +229,7 @@ individual defense: bagian yang dikerjakan, cara kerjanya, dan hubungannya denga
 - Analitik event, ekspor CSV, laporan PDF, ringkasan kampus
 - Migrasi dari Firebase ke Supabase
 - 161 unit test pada 22 berkas
+- Nama repository diganti menjadi KampusHub
 
 **Doing**
 
@@ -243,7 +244,6 @@ individual defense: bagian yang dikerjakan, cara kerjanya, dan hubungannya denga
 - Batasi check-in hanya untuk penyelenggara event dan admin (lihat risiko nomor 9)
 - Deploy versi Supabase ke hosting (repository sudah memuat `public/_redirects` untuk Netlify)
 - Laporkan perubahan teknologi dari proposal (Firebase ke Supabase) kepada dosen
-- Ganti nama repository menjadi KampusHub
 - Hapus berkas sisa versi Firebase: `diagrams.md`, `diagrams11.md`, `security_spec.md`,
   `firebase-blueprint.json`
 - Bagikan modul kepada anggota dan latihan individual defense
