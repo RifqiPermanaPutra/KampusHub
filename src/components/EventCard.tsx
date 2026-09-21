@@ -13,6 +13,8 @@ import { getEventPhase, phaseSummary } from '../lib/event-phase';
 import { getRegistrationState } from '../lib/registration';
 import { averageRating } from '../lib/review';
 import { StarRatingDisplay } from './ui/StarRating';
+import { GambarPoster } from './ui/GambarPoster';
+import { labelHarga } from '../lib/pembayaran';
 import { DoneRibbon, PHASE_CARD_STYLE, PhaseTag } from './ui/PhaseTag';
 import { cn } from '../lib/utils';
 
@@ -45,7 +47,7 @@ interface EventCardProps {
 
 export function EventCard({ event, tilt = 0, index }: EventCardProps) {
   const date = new Date(event.date);
-  const phase = getEventPhase(event.date);
+  const phase = getEventPhase(event);
   const isPast = phase === 'past';
   const isLive = phase === 'live';
   const style = getCategoryStyle(event.category);
@@ -70,12 +72,11 @@ export function EventCard({ event, tilt = 0, index }: EventCardProps) {
     >
       {/* Area poster */}
       {event.posterUrl ? (
-        <div className="relative h-44 overflow-hidden rounded-t-[10px] border-b-2 border-ink bg-ink/5">
-          <img
+        <div className="relative aspect-video overflow-hidden rounded-t-[10px] border-b-2 border-ink">
+          <GambarPoster
             src={event.posterUrl}
-            alt=""
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-            referrerPolicy="no-referrer"
+            className="h-full w-full"
+            gambarClassName="transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             loading="lazy"
           />
           <span className="sticker absolute left-3 top-3">{event.category}</span>
@@ -85,7 +86,7 @@ export function EventCard({ event, tilt = 0, index }: EventCardProps) {
       ) : (
         <div
           className={cn(
-            'relative flex h-44 flex-col justify-between overflow-hidden rounded-t-[10px] border-b-2 border-ink p-4',
+            'relative flex aspect-video flex-col justify-between overflow-hidden rounded-t-[10px] border-b-2 border-ink p-4',
             style.poster,
             style.text
           )}
@@ -122,12 +123,16 @@ export function EventCard({ event, tilt = 0, index }: EventCardProps) {
           dan yang selesai sudah ditandai pita di poster.
         */}
         {phase === 'live' && <PhaseTag phase="live" className="self-start" />}
-        {phase === 'soon' && <PhaseTag phase="soon" label={phaseSummary(event.date)} className="self-start" />}
+        {phase === 'soon' && <PhaseTag phase="soon" label={phaseSummary(event)} className="self-start" />}
         {phase === 'upcoming' && (
-          <span className="stamp self-start text-ink/70">{phaseSummary(event.date)}</span>
+          <span className="stamp self-start text-ink/70">{phaseSummary(event)}</span>
         )}
         {isPast && rating !== null && (
           <StarRatingDisplay value={rating} count={event.ratingCount} size={14} className="self-start" />
+        )}
+        {/* Penanda ini yang memberi tahu peserta dari luar UIR bahwa mereka boleh ikut. */}
+        {event.terbukaUmum && !isPast && (
+          <span className="sticker self-start bg-daun">Terbuka untuk umum</span>
         )}
 
         <p className="stamp text-ink">
@@ -137,6 +142,7 @@ export function EventCard({ event, tilt = 0, index }: EventCardProps) {
           <MapPin size={14} className="shrink-0" />
           <span className="truncate">{event.location}</span>
         </p>
+        <p className="text-sm font-extrabold text-ink">{labelHarga(event.harga)}</p>
 
         <div className="mt-auto flex items-center justify-between gap-3 border-t-2 border-dashed border-ink/20 pt-3">
           <span className="truncate text-xs font-semibold text-ink/70 tabular-nums">

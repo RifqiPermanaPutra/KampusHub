@@ -15,7 +15,7 @@ export type RegistrationState = 'open' | 'closed-deadline' | 'closed-finished';
  * - open            : masih menerima pendaftar (termasuk saat event berlangsung)
  */
 export function getRegistrationState(event: Event, now: number = Date.now()): RegistrationState {
-  if (getEventPhase(event.date, now) === 'past') return 'closed-finished';
+  if (getEventPhase(event, now) === 'past') return 'closed-finished';
   if (event.rsvpDeadline) {
     const deadline = new Date(event.rsvpDeadline).getTime();
     if (!Number.isNaN(deadline) && now > deadline) return 'closed-deadline';

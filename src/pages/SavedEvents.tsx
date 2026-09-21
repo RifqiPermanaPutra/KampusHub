@@ -19,8 +19,8 @@ import { usePageTitle } from '../lib/usePageTitle';
 /** Event yang belum lewat tampil dulu, yang sudah selesai di bawah. */
 function urutkan(events: Event[]): Event[] {
   return [...events].sort((a, b) => {
-    const pastA = getEventPhase(a.date) === 'past';
-    const pastB = getEventPhase(b.date) === 'past';
+    const pastA = getEventPhase(a) === 'past';
+    const pastB = getEventPhase(b) === 'past';
     if (pastA !== pastB) return pastA ? 1 : -1;
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });

@@ -7,6 +7,8 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { AuthShell } from '../components/AuthShell';
 import { DAFTAR_FAKULTAS, pilihanAngkatan, prodiDariFakultas } from '../lib/fakultas';
+import { PilihJenisPeserta } from '../components/PilihJenisPeserta';
+import { JenisPeserta } from '../types';
 
 /*
  * Halaman ini terutama dilewati pengguna yang masuk dengan Google: Supabase
@@ -19,9 +21,11 @@ export function CompleteProfile() {
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
+  const [jenis, setJenis] = useState<JenisPeserta>('uir');
   const [fakultas, setFakultas] = useState('');
   const [jurusan, setJurusan] = useState('');
   const [angkatan, setAngkatan] = useState('');
+  const [asalInstansi, setAsalInstansi] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,9 +65,11 @@ export function CompleteProfile() {
         email: user.email ?? '',
         role: 'mahasiswa',
         createdAt: new Date().toISOString(),
-        fakultas,
-        jurusan,
-        angkatan,
+        jenisPeserta: jenis,
+        fakultas: jenis === 'uir' ? fakultas : '',
+        jurusan: jenis === 'uir' ? jurusan : '',
+        angkatan: jenis === 'uir' ? angkatan : '',
+        asalInstansi: jenis === 'umum' ? asalInstansi.trim() : '',
       });
 
       // Muat ulang profil di AuthContext
@@ -100,31 +106,50 @@ export function CompleteProfile() {
             onChange={(e) => setName(e.target.value)}
             required
           />
-          <Select
-            label="Fakultas"
-            kosong="Pilih fakultas"
-            pilihan={DAFTAR_FAKULTAS}
-            value={fakultas}
-            onChange={(e) => gantiFakultas(e.target.value)}
-            required
-          />
-          <Select
-            label="Program Studi"
-            kosong={fakultas ? 'Pilih program studi' : 'Pilih fakultas dulu'}
-            pilihan={prodiDariFakultas(fakultas)}
-            value={jurusan}
-            onChange={(e) => setJurusan(e.target.value)}
-            disabled={!fakultas}
-            required
-          />
-          <Select
-            label="Tahun Angkatan"
-            kosong="Pilih tahun angkatan"
-            pilihan={pilihanAngkatan(new Date().getFullYear())}
-            value={angkatan}
-            onChange={(e) => setAngkatan(e.target.value)}
-            required
-          />
+          <PilihJenisPeserta nilai={jenis} onGanti={setJenis} label="Saya bergabung sebagai" />
+
+          {jenis === 'uir' ? (
+            <>
+              <Select
+                label="Fakultas"
+                kosong="Pilih fakultas"
+                pilihan={DAFTAR_FAKULTAS}
+                value={fakultas}
+                onChange={(e) => gantiFakultas(e.target.value)}
+                required
+              />
+              <Select
+                label="Program Studi"
+                kosong={fakultas ? 'Pilih program studi' : 'Pilih fakultas dulu'}
+                pilihan={prodiDariFakultas(fakultas)}
+                value={jurusan}
+                onChange={(e) => setJurusan(e.target.value)}
+                disabled={!fakultas}
+                required
+              />
+              <Select
+                label="Tahun Angkatan"
+                kosong="Pilih tahun angkatan"
+                pilihan={pilihanAngkatan(new Date().getFullYear())}
+                value={angkatan}
+                onChange={(e) => setAngkatan(e.target.value)}
+                required
+              />
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              <Input
+                label="Asal Instansi"
+                placeholder="Contoh: SMA N 1 Pekanbaru"
+                value={asalInstansi}
+                onChange={(e) => setAsalInstansi(e.target.value)}
+                required
+              />
+              <p className="text-xs text-ink/60">
+                Sekolah, kampus, perusahaan, atau komunitas Anda. Tulis "Umum" kalau tidak mewakili instansi.
+              </p>
+            </div>
+          )}
 
           {error && <div className="mading-alert" role="alert">{error}</div>}
 
@@ -137,7 +162,9 @@ export function CompleteProfile() {
           </Button>
 
           <p className="text-xs text-center text-ink/60">
-            Ingin menyelenggarakan event? Setelah ini, ajukan diri sebagai panitia dari halaman Profil.
+            {jenis === 'uir'
+              ? 'Ingin menyelenggarakan event? Setelah ini, ajukan diri sebagai panitia dari halaman Profil.'
+              : 'Akun umum bisa mendaftar ke event yang dibuka untuk umum oleh panitia kampus.'}
           </p>
         </form>
     </AuthShell>

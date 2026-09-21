@@ -6,6 +6,7 @@
 import { supabase } from '../lib/supabase';
 import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
 import { RsvpRow, rowToRsvp } from '../lib/mappers';
+import { HasilVerifikasi, bacaHasilVerifikasi } from '../lib/certificate';
 import { RSVP, RSVPStatus } from '../types';
 
 const TABLE = 'rsvps';
@@ -18,6 +19,11 @@ const TABLE = 'rsvps';
  *
  * Tabel rsvps memang tidak punya policy insert/update sama sekali: memanggil
  * API secara langsung untuk menyelundupkan kursi tidak akan berhasil.
+ *
+ * Membaca pun dibatasi: hanya penyelenggara event dan admin yang menerima semua
+ * baris sebuah event. Pengguna lain hanya menerima baris miliknya sendiri, jadi
+ * jumlah peserta harus diambil dari view events_with_counts, bukan dihitung
+ * dari hasil getRSVPsForEvent.
  */
 export const rsvpService = {
   /** Mendaftar ke event. Mengembalikan status akhir: terdaftar atau daftar tunggu. */
@@ -31,6 +37,7 @@ export const rsvpService = {
     }
   },
 
+  /** Semua pendaftar sebuah event. Lengkap hanya untuk penyelenggara dan admin. */
   async getRSVPsForEvent(eventId: string): Promise<RSVP[]> {
     try {
       const { data, error } = await supabase
@@ -82,6 +89,23 @@ export const rsvpService = {
   },
 
   /**
+   * Posisi pengguna yang sedang masuk di daftar tunggu sebuah event
+   * (1 = paling depan). Mengembalikan 0 kalau tidak sedang menunggu atau
+   * posisinya gagal dibaca. Dihitung database karena browser tidak bisa
+   * melihat baris pendaftar lain.
+   */
+  async getWaitlistPosition(eventId: string): Promise<number> {
+    try {
+      const { data, error } = await supabase.rpc('posisi_daftar_tunggu', { p_event_id: eventId });
+      if (error) throw error;
+      return typeof data === 'number' ? data : 0;
+    } catch (error) {
+      logDbError(error, OperationType.GET, TABLE);
+      return 0;
+    }
+  },
+
+  /**
    * Batalkan RSVP. Kalau pembatalan itu mengosongkan satu kursi, peserta daftar
    * tunggu paling lama otomatis naik dalam transaksi yang sama, dan baris
    * miliknya dikembalikan supaya halaman bisa mengirimi dia notifikasi.
@@ -116,6 +140,20 @@ export const rsvpService = {
       return rowToRsvp(data as RsvpRow);
     } catch (error) {
       throwDbError(error, OperationType.UPDATE, TABLE);
+    }
+  },
+
+  /**
+   * Periksa keaslian sertifikat dari kodenya. Bisa dipanggil tanpa login:
+   * fungsi database hanya mengembalikan isi sertifikat, bukan baris pendaftaran.
+   */
+  async verifyCertificate(code: string): Promise<HasilVerifikasi> {
+    try {
+      const { data, error } = await supabase.rpc('verifikasi_sertifikat', { p_kode: code });
+      if (error) throw error;
+      return bacaHasilVerifikasi(data);
+    } catch (error) {
+      throwDbError(error, OperationType.GET, TABLE);
     }
   },
 };

@@ -38,11 +38,11 @@ export function buildInfoBoard(events: Event[], now: number = Date.now()): InfoB
   // Event yang sedang berlangsung ikut dihitung aktif dan, karena waktu mulainya
   // sudah lewat, otomatis berada paling depan setelah diurutkan.
   const aktif = events
-    .filter(e => getEventPhase(e.date, now) !== 'past')
+    .filter(e => getEventPhase(e, now) !== 'past')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const berikutnya = aktif[0] ?? null;
-  const fase = berikutnya ? getEventPhase(berikutnya.date, now) : null;
+  const fase = berikutnya ? getEventPhase(berikutnya, now) : null;
 
   const perKategori = new Map<string, number>();
   for (const e of aktif) {
@@ -54,7 +54,7 @@ export function buildInfoBoard(events: Event[], now: number = Date.now()): InfoB
 
   return {
     berikutnya,
-    ringkasan: berikutnya ? phaseSummary(berikutnya.date, now) : '',
+    ringkasan: berikutnya ? phaseSummary(berikutnya, now) : '',
     mendesak: fase === 'live' || fase === 'soon',
     // Sengaja dihitung dari seluruh event, bukan hanya yang aktif: yang dimaksud
     // "minggu ini" adalah yang belum mulai tapi akan mulai dalam tujuh hari.

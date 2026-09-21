@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, CalendarPlus, MapPin, Send, MessageSquare, Share2, ShieldCheck, Trash2, Download, Edit, BarChart3, Bookmark, BookmarkCheck, Hourglass, ScanLine, Ticket } from 'lucide-react';
+import { Calendar, CalendarPlus, MapPin, Send, MessageSquare, Share2, ShieldCheck, Trash2, Download, Edit, BarChart3, Bookmark, BookmarkCheck, Hourglass, ScanLine, Ticket, Award } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,27 +23,31 @@ import { ReviewSection } from '../components/ReviewSection';
 import { RejectEventModal } from '../components/RejectEventModal';
 import { getQuotaSticker } from '../components/EventCard';
 import { getCategoryStyle } from '../constants';
-import { EVENT_DURATION_MS, countdownParts, getEventPhase } from '../lib/event-phase';
+import { JadwalEvent, countdownParts, getEventPhase, rentangEvent } from '../lib/event-phase';
 import { PhaseTag } from '../components/ui/PhaseTag';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { cn } from '../lib/utils';
 import { downloadEventIcs } from '../lib/calendar';
 import { deadlineNote, getRegistrationState, registrationButtonLabel } from '../lib/registration';
+import { asalPeserta, halanganPendaftaran, pesanHalangan } from '../lib/peserta';
+import { KonfirmasiBatalDaftar } from '../components/KonfirmasiBatalDaftar';
+import { PanelBayar } from '../components/PanelBayar';
+import { eventBerbayar, labelHarga } from '../lib/pembayaran';
 import { shareEvent } from '../lib/share';
 
 /**
  * Hitung mundur menuju waktu mulai; saat event berlangsung, berubah jadi
- * hitung mundur menuju perkiraan waktu selesai. Diperbarui tiap 30 detik.
+ * hitung mundur menuju waktu selesai. Diperbarui tiap 30 detik.
  */
-function Countdown({ target }: { target: Date }) {
+function Countdown({ jadwal }: { jadwal: JadwalEvent }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
 
-  const { phase, days, hours, minutes } = countdownParts(target, now);
+  const { phase, days, hours, minutes } = countdownParts(jadwal, now);
   if (phase === 'past') return null;
 
   const parts: [number, string][] = [[days, 'hari'], [hours, 'jam'], [minutes, 'menit']];
@@ -82,15 +86,17 @@ function Countdown({ target }: { target: Date }) {
 }
 
 /** Bar tipis yang menunjukkan berapa lama event sudah berjalan. */
-function LiveProgress({ start }: { start: Date }) {
+function LiveProgress({ jadwal }: { jadwal: JadwalEvent }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
 
-  const elapsed = Math.min(Math.max(now - start.getTime(), 0), EVENT_DURATION_MS);
-  const percent = (elapsed / EVENT_DURATION_MS) * 100;
+  const { start, end } = rentangEvent(jadwal);
+  const durasi = end - start;
+  const elapsed = Math.min(Math.max(now - start, 0), durasi);
+  const percent = (elapsed / durasi) * 100;
   const minutes = Math.floor(elapsed / 60_000);
   const label = minutes >= 60
     ? `${Math.floor(minutes / 60)} jam ${minutes % 60} menit`
@@ -123,12 +129,14 @@ export function EventDetail() {
   const { showToast } = useToast();
   const [event, setEvent] = useState<Event | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
+  const [posisiTunggu, setPosisiTunggu] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
   const [myRsvp, setMyRsvp] = useState<RSVP | null>(null);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
   // Cap "Terdaftar" yang muncul sesaat setelah pendaftaran berhasil.
@@ -179,6 +187,20 @@ export function EventDetail() {
     return () => { batal = true; };
   }, [profile?.uid, id]);
 
+  // Posisi antrean dihitung database: selain penyelenggara dan admin, pengguna
+  // hanya bisa membaca baris pendaftarannya sendiri.
+  useEffect(() => {
+    if (!id || myRsvp?.status !== 'waitlist') {
+      setPosisiTunggu(0);
+      return;
+    }
+    let batal = false;
+    rsvpService.getWaitlistPosition(id).then(posisi => {
+      if (!batal) setPosisiTunggu(posisi);
+    });
+    return () => { batal = true; };
+  }, [id, myRsvp?.status]);
+
   const handleToggleSave = async () => {
     if (!profile || !event) return;
     setSavingBookmark(true);
@@ -194,9 +216,24 @@ export function EventDetail() {
     }
   };
 
-  const registeredRsvps = rsvps.filter(r => r.status !== 'waitlist');
-  const waitlistRsvps = rsvps.filter(r => r.status === 'waitlist');
-  const isFull = event?.capacity !== undefined && registeredRsvps.length >= event.capacity;
+  /*
+   * Jumlah peserta diambil dari view events_with_counts, bukan dihitung dari
+   * daftar rsvps: selain penyelenggara dan admin, daftar itu hanya berisi
+   * pendaftaran milik pengguna sendiri.
+   */
+  const jumlahTerdaftar = event?.attendeeCount ?? rsvps.filter(r => r.status !== 'waitlist').length;
+  const jumlahMenunggu = event?.waitlistCount ?? rsvps.filter(r => r.status === 'waitlist').length;
+  const isFull = event?.capacity !== undefined && jumlahTerdaftar >= event.capacity;
+
+  /** Ambil ulang hitungan kursi dan daftar peserta setelah mendaftar atau batal. */
+  const muatUlangPeserta = async (eventId: string) => {
+    const [terbaru, daftar] = await Promise.all([
+      eventService.getEventById(eventId),
+      rsvpService.getRSVPsForEvent(eventId),
+    ]);
+    if (terbaru) setEvent(terbaru);
+    setRsvps(daftar);
+  };
 
   const handleRSVP = async () => {
     if (!profile || !event || myRsvp) return;
@@ -208,8 +245,7 @@ export function EventDetail() {
       const status = await rsvpService.rsvpToEvent(event.id);
       const mine = await rsvpService.getUserRSVP(event.id, profile.uid);
       setMyRsvp(mine);
-      const r = await rsvpService.getRSVPsForEvent(event.id);
-      setRsvps(r);
+      await muatUlangPeserta(event.id);
 
       if (status !== 'waitlist') {
         setShowStamp(true);
@@ -224,7 +260,9 @@ export function EventDetail() {
       // Penyelenggara dikabari trigger notif_pendaftar_baru di database.
     } catch (err) {
       console.error(err);
-      setActionError('Gagal mendaftar. Silakan coba lagi.');
+      // Pesan dari database sudah menjelaskan sebabnya, misalnya pendaftaran
+      // sudah ditutup atau event khusus mahasiswa UIR. Jangan diganti pesan umum.
+      setActionError(err instanceof Error ? err.message : 'Gagal mendaftar. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -237,14 +275,13 @@ export function EventDetail() {
     try {
       await rsvpService.cancelRSVP(event.id);
       setMyRsvp(null);
-      const r = await rsvpService.getRSVPsForEvent(event.id);
-      setRsvps(r);
+      await muatUlangPeserta(event.id);
       showToast('Pendaftaran Anda telah dibatalkan.', 'info');
 
       // Peserta daftar tunggu yang naik dikabari fungsi cancel_rsvp di database.
     } catch (err) {
       console.error(err);
-      setActionError('Gagal membatalkan pendaftaran. Silakan coba lagi.');
+      setActionError(err instanceof Error ? err.message : 'Gagal membatalkan pendaftaran. Silakan coba lagi.');
     } finally {
       setActionLoading(false);
     }
@@ -252,10 +289,11 @@ export function EventDetail() {
 
   const handleExportCSV = () => {
     const csvContent = [
-      ['Nama', 'Status', 'Fakultas', 'Program Studi', 'Angkatan', 'Tanggal Daftar'],
+      ['Nama', 'Status', 'Asal Peserta', 'Fakultas', 'Program Studi', 'Angkatan', 'Tanggal Daftar'],
       ...rsvps.map(r => [
         r.userName,
         r.status || 'registered',
+        asalPeserta(r),
         r.fakultas || '-',
         r.jurusan || '-',
         r.angkatan || '-',
@@ -290,7 +328,9 @@ export function EventDetail() {
       // Penyelenggara dikabari trigger notif_komentar_baru di database.
     } catch (err) {
       console.error(err);
-      setCommentError('Gagal mengirim komentar. Silakan coba lagi.');
+      // Pesan dari database menjelaskan sebabnya, misalnya batas pertanyaan
+      // per menit beserta lama tunggunya.
+      setCommentError(err instanceof Error ? err.message : 'Gagal mengirim pertanyaan. Silakan coba lagi.');
     }
   };
 
@@ -335,7 +375,7 @@ export function EventDetail() {
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      setActionError('Gagal menghapus event. Silakan coba lagi.');
+      setActionError(err instanceof Error ? err.message : 'Gagal menghapus event. Silakan coba lagi.');
       setActionLoading(false);
       setShowDeleteModal(false);
     }
@@ -368,7 +408,9 @@ export function EventDetail() {
   }
 
   const eventDate = new Date(event.date);
-  const phase = getEventPhase(event.date);
+  const eventEnd = new Date(rentangEvent(event).end);
+  const selesaiHariSama = eventDate.toDateString() === eventEnd.toDateString();
+  const phase = getEventPhase(event);
   const isPast = phase === 'past';
   const isLive = phase === 'live';
   const style = getCategoryStyle(event.category);
@@ -377,11 +419,9 @@ export function EventDetail() {
   const registrationClosed = regState !== 'open';
   const catatanDeadline = deadlineNote(event);
   const canManage = profile?.role === 'admin' || (profile?.role === 'panitia' && profile?.uid === event.organizerId);
-  const quotaPercent = event.capacity ? Math.min((registeredRsvps.length / event.capacity) * 100, 100) : 0;
-  const waitlistPosition = waitlistRsvps
-    .slice()
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .findIndex(r => r.userId === profile?.uid) + 1 || '?';
+  // Aturan yang sama ditegakkan fungsi rsvp_event di database.
+  const halangan = halanganPendaftaran(event, profile);
+  const quotaPercent = event.capacity ? Math.min((jumlahTerdaftar / event.capacity) * 100, 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
@@ -403,6 +443,8 @@ export function EventDetail() {
             <span className="sticker">{event.category}</span>
             {event.status !== 'approved' && <StatusPill status={event.status} />}
             {quotaSticker && <span className="sticker bg-spidol">{quotaSticker}</span>}
+            {event.terbukaUmum && <span className="sticker bg-daun">Terbuka untuk umum</span>}
+            <span className="sticker">{labelHarga(event.harga)}</span>
           </div>
           <h1 className="relative editorial-title text-4xl sm:text-5xl lg:text-6xl leading-[0.95]">
             {event.title}
@@ -410,7 +452,9 @@ export function EventDetail() {
           <div className="relative mt-6 flex flex-wrap gap-x-6 gap-y-2 font-semibold">
             <span className="flex items-center gap-2">
               <Calendar size={18} className="shrink-0" />
-              {format(eventDate, 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })} WIB
+              {format(eventDate, 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })}
+              {' sampai '}
+              {format(eventEnd, selesaiHariSama ? 'HH.mm' : 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })} WIB
             </span>
             <span className="flex items-center gap-2 min-w-0">
               <MapPin size={18} className="shrink-0" />
@@ -441,10 +485,11 @@ export function EventDetail() {
 
         {event.posterUrl && (
           <figure className={cn('mading-card bg-white p-2 -rotate-1 motion-reduce:rotate-0', isPast && 'grayscale opacity-90')}>
+            {/* Ukuran asli, tidak dipotong: di sinilah poster dibaca secara utuh. */}
             <img
               src={event.posterUrl}
               alt={`Poster ${event.title}`}
-              className="w-full aspect-video object-cover rounded-md border-2 border-ink"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-md border-2 border-ink bg-white"
               referrerPolicy="no-referrer"
             />
           </figure>
@@ -480,7 +525,7 @@ export function EventDetail() {
             </Button>
           </form>
 
-          {commentError && <p className="mading-alert">{commentError}</p>}
+          {commentError && <p className="mading-alert" role="alert">{commentError}</p>}
 
           <div className="space-y-4">
             {comments.map((comment) => (
@@ -508,9 +553,9 @@ export function EventDetail() {
               Terdaftar
             </span>
           )}
-          {!isPast && <Countdown target={eventDate} />}
+          {!isPast && <Countdown jadwal={event} />}
 
-          {isLive && <LiveProgress start={eventDate} />}
+          {isLive && <LiveProgress jadwal={event} />}
 
           {isLive && (
             <div className="rounded-lg border-2 border-ink bg-spidol/20 p-3 text-sm font-semibold text-ink flex items-start gap-2">
@@ -528,7 +573,7 @@ export function EventDetail() {
           <div className="space-y-3">
             <h4 className="eyebrow">Kehadiran</h4>
             <div className="flex items-baseline gap-2">
-              <span className="font-editorial text-5xl font-extrabold text-ink tabular-nums leading-none">{registeredRsvps.length}</span>
+              <span className="font-editorial text-5xl font-extrabold text-ink tabular-nums leading-none">{jumlahTerdaftar}</span>
               <span className="text-ink/70 font-semibold text-sm">
                 {event.capacity ? `/ ${event.capacity} kursi terisi` : 'mahasiswa terdaftar'}
               </span>
@@ -539,7 +584,7 @@ export function EventDetail() {
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={event.capacity}
-                aria-valuenow={registeredRsvps.length}
+                aria-valuenow={jumlahTerdaftar}
                 aria-label="Kuota terisi"
               >
                 <div
@@ -548,12 +593,13 @@ export function EventDetail() {
                 />
               </div>
             ) : null}
-            {waitlistRsvps.length > 0 && (
+            {jumlahMenunggu > 0 && (
               <p className="text-xs text-ink/70 font-semibold flex items-center gap-1.5">
-                <Hourglass size={12} /> {waitlistRsvps.length} orang di daftar tunggu
+                <Hourglass size={12} /> {jumlahMenunggu} orang di daftar tunggu
               </p>
             )}
-            {rsvps.length > 0 && (
+            {/* Nama peserta hanya untuk penyelenggara dan admin. */}
+            {canManage && rsvps.length > 0 && (
               <div className="flex -space-x-2.5">
                 {rsvps.slice(0, 5).map((rsvp) => (
                   <Avatar key={rsvp.id} nama={rsvp.userName} alt={rsvp.userName} className="w-9 h-9 text-[11px]" />
@@ -571,7 +617,7 @@ export function EventDetail() {
             <div className="mading-note flex items-start gap-2">
               <Hourglass size={16} className="shrink-0 mt-0.5" />
               <span>
-                Anda di daftar tunggu (posisi #{waitlistPosition}). Anda otomatis terdaftar jika ada slot kosong.
+                Anda di daftar tunggu (posisi #{posisiTunggu || '?'}). Anda otomatis terdaftar jika ada slot kosong.
               </span>
             </div>
           )}
@@ -583,15 +629,34 @@ export function EventDetail() {
             </Link>
           )}
 
+          {!myRsvp && halangan && (
+            <p className="mading-alert" role="status">{pesanHalangan(halangan)}</p>
+          )}
+
+          {eventBerbayar(event) && profile ? (
+            <PanelBayar
+              event={event}
+              userId={profile.uid}
+              terdaftar={Boolean(myRsvp)}
+              ditutup={registrationClosed}
+              labelDitutup={registrationButtonLabel(regState)}
+              terhalang={halangan !== null}
+              onLunas={async () => {
+                setMyRsvp(await rsvpService.getUserRSVP(event.id, profile.uid));
+                await muatUlangPeserta(event.id);
+                showToast('Pembayaran diterima. E-tiket Anda sudah terbit.', 'success');
+              }}
+            />
+          ) : (
           <Button
             className="w-full"
             size="lg"
             variant={myRsvp ? 'outline' : isFull ? 'stabilo' : 'primary'}
-            onClick={myRsvp ? handleCancelRSVP : handleRSVP}
+            onClick={myRsvp ? () => setShowCancelModal(true) : handleRSVP}
             loading={actionLoading}
             disabled={
               event.status !== 'approved' ||
-              (!myRsvp && registrationClosed)
+              (!myRsvp && (registrationClosed || halangan !== null))
             }
           >
             {myRsvp
@@ -604,6 +669,7 @@ export function EventDetail() {
                     ? 'Ikut Sekarang →'
                     : 'Daftar Sekarang →'}
           </Button>
+          )}
 
           {catatanDeadline && !isPast && (
             <p className={cn('text-xs font-semibold text-center', regState === 'closed-deadline' ? 'text-ink' : 'text-ink/70')}>
@@ -611,7 +677,7 @@ export function EventDetail() {
             </p>
           )}
 
-          {actionError && <p className="mading-alert text-center">{actionError}</p>}
+          {actionError && <p className="mading-alert text-center" role="alert">{actionError}</p>}
 
           <div className="grid grid-cols-2 gap-3">
             <Button
@@ -640,6 +706,14 @@ export function EventDetail() {
                   <Button variant="stabilo" className="w-full" tabIndex={-1}>
                     <ScanLine size={16} className="mr-2" />
                     Scanner Tiket & Check-in
+                  </Button>
+                </Link>
+              )}
+              {event.status === 'approved' && (
+                <Link to={`/event/${event.id}/sertifikat`} className="block">
+                  <Button variant="outline" className="w-full" tabIndex={-1}>
+                    <Award size={16} className="mr-2" />
+                    Sertifikat Peserta
                   </Button>
                 </Link>
               )}
@@ -748,6 +822,19 @@ export function EventDetail() {
             <Button className="w-full" onClick={() => setShareUrl(null)}>Tutup</Button>
           </div>
         </Modal>
+      )}
+
+      {showCancelModal && myRsvp && (
+        <KonfirmasiBatalDaftar
+          judulEvent={event.title}
+          daftarTunggu={myRsvp.status === 'waitlist'}
+          memproses={actionLoading}
+          onBatal={() => setShowCancelModal(false)}
+          onYakin={async () => {
+            await handleCancelRSVP();
+            setShowCancelModal(false);
+          }}
+        />
       )}
 
       {showDeleteModal && (

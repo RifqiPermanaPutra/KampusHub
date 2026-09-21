@@ -27,7 +27,9 @@ export const TIPE_POSTER = Object.keys(EKSTENSI);
 export function validasiPoster(berkas: { size: number; type: string }): string | null {
   if (!EKSTENSI[berkas.type]) return 'Format poster harus JPG, PNG, atau WebP.';
   if (berkas.size === 0) return 'Berkas poster kosong.';
-  if (berkas.size > MAX_POSTER_BYTES) return 'Ukuran poster maksimal 2 MB.';
+  if (berkas.size > MAX_POSTER_BYTES) {
+    return 'Ukuran berkas poster maksimal 2 MB. Simpan sebagai JPG atau WebP supaya lebih kecil.';
+  }
   return null;
 }
 
@@ -43,4 +45,35 @@ export function jalurPoster(userId: string, tipe: string, acak: string): string 
   const ekstensi = EKSTENSI[tipe];
   if (!ekstensi) throw new Error('Format poster tidak didukung.');
   return `${userId}/${acak}.${ekstensi}`;
+}
+
+/*
+ * Semua poster memakai ukuran baku lanskap 16:9, minimal 1920 × 1080 px.
+ * Dengan satu bentuk, kartu event, slider Beranda, dan detail event bisa
+ * memakai bingkai 16:9 yang pas persis, jadi poster tidak pernah terpotong
+ * dan tidak menyisakan ruang kosong. Ekspor yang lebih besar, misalnya 4K,
+ * tetap diterima karena bentuknya sama.
+ */
+export const LEBAR_POSTER = 1920;
+export const TINGGI_POSTER = 1080;
+
+/** Selisih rasio yang masih diterima, untuk ekspor yang meleset beberapa piksel. */
+const TOLERANSI_RASIO = 0.02;
+
+export const SARAN_UKURAN_POSTER =
+  'Wajib lanskap 16:9 dengan ukuran 1920 × 1080 px (boleh lebih besar, misalnya 3840 × 2160). ' +
+  'Format JPG, PNG, atau WebP, maksimal 2 MB.';
+
+/** Pesan galat untuk ukuran gambar, atau null kalau layak dipakai sebagai poster. */
+export function validasiDimensiPoster(lebar: number, tinggi: number): string | null {
+  if (!lebar || !tinggi) {
+    return 'Ukuran gambar tidak terbaca. Coba simpan ulang gambarnya sebagai JPG atau PNG.';
+  }
+  if (Math.abs(lebar / tinggi - LEBAR_POSTER / TINGGI_POSTER) > TOLERANSI_RASIO) {
+    return `Poster harus lanskap 16:9 (${LEBAR_POSTER} × ${TINGGI_POSTER} px). Gambar ini berukuran ${lebar} × ${tinggi} px.`;
+  }
+  if (lebar < LEBAR_POSTER) {
+    return `Poster terlalu kecil (${lebar} × ${tinggi} px). Ukuran minimal ${LEBAR_POSTER} × ${TINGGI_POSTER} px supaya tetap tajam di layar lebar.`;
+  }
+  return null;
 }

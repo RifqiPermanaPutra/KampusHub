@@ -5,6 +5,7 @@ import {
   getEventPhase,
   phaseLabel,
   phaseSummary,
+  rentangEvent,
 } from '../event-phase';
 
 const start = new Date('2026-09-18T13:00:00.000Z').getTime();
@@ -84,5 +85,32 @@ describe('phaseSummary memakai hari kalender', () => {
     const now = new Date('2026-09-12T09:00:00');
     const nanti = new Date('2026-09-12T14:00:00');
     expect(phaseSummary(nanti, now.getTime())).toBe('5 jam lagi');
+  });
+});
+
+describe('waktu selesai event', () => {
+  const mulai = new Date(start).toISOString();
+
+  it('memakai waktu selesai yang disimpan, bukan durasi bawaan', () => {
+    const event = { date: mulai, endDate: new Date(start + 2 * jam).toISOString() };
+    expect(getEventPhase(event, start + jam)).toBe('live');
+    expect(getEventPhase(event, start + 2 * jam)).toBe('past');
+  });
+
+  it('event beberapa hari tetap berlangsung sampai waktu selesainya', () => {
+    const event = { date: mulai, endDate: new Date(start + 50 * jam).toISOString() };
+    expect(getEventPhase(event, start + 30 * jam)).toBe('live');
+    expect(phaseSummary(event, start + 30 * jam)).toBe('Sedang berlangsung');
+  });
+
+  it('menghitung mundur ke waktu selesai yang disimpan', () => {
+    const event = { date: mulai, endDate: new Date(start + 2 * jam).toISOString() };
+    expect(countdownParts(event, start + 30 * 60 * 1000)).toMatchObject({ phase: 'live', hours: 1, minutes: 30 });
+  });
+
+  it('kembali ke durasi bawaan kalau waktu selesai kosong atau tidak masuk akal', () => {
+    expect(rentangEvent({ date: mulai }).end).toBe(start + EVENT_DURATION_MS);
+    expect(rentangEvent({ date: mulai, endDate: new Date(start - jam).toISOString() }).end).toBe(start + EVENT_DURATION_MS);
+    expect(rentangEvent({ date: mulai, endDate: 'bukan-tanggal' }).end).toBe(start + EVENT_DURATION_MS);
   });
 });

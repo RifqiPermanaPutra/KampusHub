@@ -10,6 +10,9 @@ import {
   rowToProfile,
   rowToReview,
   rowToRsvp,
+  rowToPembayaran,
+  rowToPengaturanSertifikat,
+  rowToSertifikat,
 } from '../mappers';
 
 const barisEvent: EventRow = {
@@ -219,5 +222,135 @@ describe('kolom moderasi', () => {
     });
     expect(profil.pengajuanPanitia).toBe('menunggu');
     expect(profileToRow({ pengajuanPanitia: 'menunggu' })).toEqual({ pengajuan_panitia: 'menunggu' });
+  });
+});
+
+describe('waktu selesai event', () => {
+  it('memetakan end_date bolak-balik', () => {
+    const event = rowToEvent({ ...barisEvent, end_date: '2026-09-20T05:00:00+00:00' });
+    expect(event.endDate).toBe('2026-09-20T05:00:00+00:00');
+    expect(eventToRow({ endDate: event.endDate })).toEqual({ end_date: '2026-09-20T05:00:00+00:00' });
+  });
+
+  it('membiarkan endDate undefined kalau kolomnya belum ada', () => {
+    expect(rowToEvent(barisEvent).endDate).toBeUndefined();
+  });
+});
+
+describe('asal peserta', () => {
+  const barisProfil: ProfileRow = {
+    id: 'u9',
+    name: 'Dina',
+    email: 'dina@sekolah.sch.id',
+    role: 'mahasiswa',
+    created_at: '2026-01-01T00:00:00+00:00',
+    bio: null,
+    npm: null,
+    fakultas: null,
+    jurusan: null,
+    angkatan: null,
+    organisasi: null,
+    jabatan: null,
+    no_telepon: null,
+    pengajuan_panitia: null,
+  };
+
+  const barisPendaftaran: RsvpRow = {
+    event_id: 'e1',
+    user_id: 'u9',
+    user_name: 'Dina',
+    status: 'registered',
+    checked_in_at: null,
+    fakultas: null,
+    jurusan: null,
+    angkatan: null,
+    created_at: '2026-09-15T00:00:00+00:00',
+  };
+
+  it('memetakan jenis peserta dan asal instansi di profil', () => {
+    const profil = rowToProfile({ ...barisProfil, jenis_peserta: 'umum', asal_instansi: 'SMA N 1 Pekanbaru' });
+    expect(profil.jenisPeserta).toBe('umum');
+    expect(profil.asalInstansi).toBe('SMA N 1 Pekanbaru');
+    expect(profileToRow({ jenisPeserta: 'umum', asalInstansi: 'SMA N 1' }))
+      .toEqual({ jenis_peserta: 'umum', asal_instansi: 'SMA N 1' });
+  });
+
+  it('memetakan salinan asal peserta di pendaftaran', () => {
+    const rsvp = rowToRsvp({ ...barisPendaftaran, jenis_peserta: 'umum', asal_instansi: 'Komunitas Riau Dev' });
+    expect(rsvp.jenisPeserta).toBe('umum');
+    expect(rsvp.asalInstansi).toBe('Komunitas Riau Dev');
+  });
+
+  it('memetakan event yang terbuka untuk umum', () => {
+    expect(rowToEvent({ ...barisEvent, terbuka_umum: true }).terbukaUmum).toBe(true);
+    expect(rowToEvent(barisEvent).terbukaUmum).toBeUndefined();
+    expect(eventToRow({ terbukaUmum: false })).toEqual({ terbuka_umum: false });
+  });
+});
+
+describe('harga dan pembayaran', () => {
+  it('memetakan harga dan kursi yang ditahan', () => {
+    const event = rowToEvent({ ...barisEvent, harga: 25000, kursi_ditahan: 2 });
+    expect(event.harga).toBe(25000);
+    expect(event.kursiDitahan).toBe(2);
+    expect(eventToRow({ harga: 0 })).toEqual({ harga: 0 });
+  });
+
+  it('memetakan baris pembayaran', () => {
+    const bayar = rowToPembayaran({
+      order_id: 'KH-1',
+      event_id: 'e1',
+      user_id: 'u1',
+      jumlah: 25000,
+      status: 'lunas',
+      snap_token: 'token',
+      metode: 'qris',
+      batas_bayar: '2026-09-20T10:30:00+00:00',
+      dibayar_pada: '2026-09-20T10:10:00+00:00',
+      created_at: '2026-09-20T10:00:00+00:00',
+    });
+    expect(bayar).toMatchObject({ orderId: 'KH-1', jumlah: 25000, status: 'lunas', metode: 'qris' });
+    expect(bayar.dibayarPada).toBe('2026-09-20T10:10:00+00:00');
+  });
+});
+
+describe('sertifikat', () => {
+  it('mengubah posisi numeric yang terbaca sebagai teks menjadi angka', () => {
+    const p = rowToPengaturanSertifikat({
+      event_id: 'e1',
+      kode_event: 'SNT',
+      template_path: null,
+      posisi_x: '50.00',
+      posisi_y: 43.4,
+      ukuran_huruf: 32,
+      huruf: 'Helvetica-Bold',
+      warna: '#121212',
+      perataan: 'tengah',
+      tampilkan_nomor: true,
+    });
+    expect(p.posisiX).toBe(50);
+    expect(p.posisiY).toBe(43.4);
+    expect(p.templatePath).toBeUndefined();
+  });
+
+  it('membaca nama pendaftar dan data event yang ikut di kueri', () => {
+    const s = rowToSertifikat({
+      id: 's1',
+      event_id: 'e1',
+      user_id: 'u1',
+      nomor: 'KH/2026/SNT/0001',
+      kode_verifikasi: 'a'.repeat(32),
+      nama_peserta: null,
+      dasar: 'hadir',
+      status: 'menunggu',
+      pesan_gagal: null,
+      file_path: null,
+      diterbitkan_pada: null,
+      rsvps: { user_name: 'Ahmad' },
+      events: { title: 'Seminar', date: '2026-09-20T01:00:00+00:00', end_date: null, organizer_name: 'BEM' },
+    });
+    expect(s.namaPendaftar).toBe('Ahmad');
+    expect(s.namaPeserta).toBeUndefined();
+    expect(s.event).toEqual({ judul: 'Seminar', mulai: '2026-09-20T01:00:00+00:00', selesai: undefined, penyelenggara: 'BEM' });
   });
 });

@@ -40,7 +40,9 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 
 1. Buat project baru di [supabase.com](https://supabase.com).
 2. Buka **SQL Editor**, lalu jalankan berkas di `supabase/migrations/` **berurutan**:
-   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql` → `07_prodi.sql`.
+   `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql` → `07_prodi.sql` → `08_akses_dan_waktu_selesai.sql` →
+   `09_peserta_umum.sql` → `10_kapasitas_daftar_tunggu.sql` → `11_pembayaran.sql` →
+   `12_batas_permintaan.sql` → `13_sertifikat.sql`.
 3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.
 4. Untuk login Google: daftarkan OAuth client di Google Cloud Console, lalu isi
    Client ID dan Secret di **Authentication → Providers → Google**.
@@ -55,6 +57,54 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 
 > Supaya fitur **lupa kata sandi** bekerja, tambahkan `http://localhost:3000/atur-sandi` di
 > **Authentication → URL Configuration → Redirect URLs**.
+
+## Event Berbayar (Midtrans)
+
+Event berbayar dibayar lewat Midtrans Snap. Langkah menyiapkannya dalam mode sandbox
+(tanpa uang sungguhan):
+
+1. Buat akun di [dashboard.sandbox.midtrans.com](https://dashboard.sandbox.midtrans.com), lalu
+   buka **Settings → Access Keys** untuk mengambil **Client Key** dan **Server Key**.
+2. Isi `VITE_MIDTRANS_CLIENT_KEY` di `.env.local` dengan Client Key.
+3. Di Supabase **Edge Functions → Secrets**, tambahkan `MIDTRANS_SERVER_KEY` berisi Server Key.
+   Server Key tidak boleh ditaruh di `.env.local` atau di kode aplikasi.
+4. Pasang dua Edge Function dari folder `supabase/functions/`:
+   - `pembayaran`, dengan **Verify JWT** menyala.
+   - `notifikasi-midtrans`, dengan **Verify JWT** dimatikan.
+5. Di dasbor Midtrans **Settings → Payment → Notification URL**, isi
+   `https://<id-proyek>.supabase.co/functions/v1/notifikasi-midtrans`.
+
+Tanpa langkah 5, pembayaran tetap bisa dikonfirmasi lewat tombol **Cek Status Pembayaran**.
+
+## Keamanan Akun (Supabase Auth)
+
+Login, pendaftaran, dan lupa kata sandi ditangani Supabase Auth: kata sandi di-hash, token
+atur ulang acak, punya masa berlaku, dan hanya bisa dipakai sekali. Periksa pengaturan ini di
+dasbor Supabase:
+
+1. **Authentication → Providers → Email**: Minimum password length **8**, sama dengan aplikasi.
+2. **Authentication → Rate Limits**: batas pengiriman email, verifikasi token, serta masuk dan
+   daftar per alamat IP.
+3. **Authentication → Providers → Email**: nyalakan **Confirm email** saat aplikasi dipakai
+   sungguhan. Selama mati, formulir daftar secara teknis masih bisa dipakai menebak email.
+4. Masa berlaku tautan email (Email OTP Expiration) 3600 detik atau kurang.
+5. Pasang **Custom SMTP** saat dipakai sungguhan; SMTP bawaan Supabase hanya untuk uji coba.
+
+Aksi yang melewati database (mendaftar event, tanya jawab, pembayaran, pengajuan panitia,
+sertifikat, verifikasi) dibatasi `12_batas_permintaan.sql`.
+
+## Sertifikat
+
+Panitia membuka detail event → **Sertifikat Peserta**, lalu:
+
+1. Mengunggah template PDF (misalnya ekspor Canva "PDF Standar"), atau memakai desain bawaan,
+   dan mengatur kode event serta posisi nama.
+2. Setelah event selesai: **Sinkronkan Peserta** → **Generate Sertifikat** → **Terbitkan ke Semua**.
+
+Yang berhak adalah peserta yang check-in. Peserta berbayar yang lunas tapi tidak check-in baru
+mendapat sertifikat setelah panitia menekan **Setujui**. PDF dibuat di browser panitia; biarkan
+tab tetap terbuka selama proses, dan kalau terputus, tekan Generate lagi untuk melanjutkan.
+Peserta mengunduh sertifikatnya dari menu **Sertifikat Saya**.
 
 ## Catatan Arsitektur
 

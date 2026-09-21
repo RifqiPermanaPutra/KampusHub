@@ -47,6 +47,12 @@ export function pesanDbError(error: unknown): string {
       return 'Data tidak ditemukan.';
     case '42P01':
       return 'Tabel belum dibuat. Jalankan berkas di supabase/migrations lebih dulu.';
+    // Fungsi atau tabel yang dipanggil aplikasi belum ada di database:
+    // migrasi terbaru belum dijalankan.
+    case 'PGRST202':
+    case 'PGRST205':
+    case '42883':
+      return 'Fitur ini belum aktif di database. Jalankan berkas terbaru di supabase/migrations lebih dulu.';
     default:
       return pesan || 'Terjadi kesalahan saat menghubungi server.';
   }

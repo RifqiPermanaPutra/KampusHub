@@ -13,6 +13,8 @@ import { StatCard } from '../components/ui/StatCard';
 import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { rsvpService } from '../services/rsvpService';
+import { pembayaranService } from '../services/pembayaranService';
+import { eventBerbayar, formatRupiah, ringkasPendapatan } from '../lib/pembayaran';
 import { reviewService } from '../services/reviewService';
 import { formatRating, ratingDistribution } from '../lib/review';
 import { StarRatingDisplay } from '../components/ui/StarRating';
@@ -30,6 +32,7 @@ export function EventAnalytics() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [membuatLaporan, setMembuatLaporan] = useState(false);
+  const [pendapatan, setPendapatan] = useState<{ total: number; lunas: number } | null>(null);
   const [loading, setLoading] = useState(true);
   usePageTitle('Analitik Event');
 
@@ -49,6 +52,9 @@ export function EventAnalytics() {
       const daftarRsvp = await rsvpService.getRSVPsForEvent(id);
       setRsvps(daftarRsvp);
       setAnalytics(buildEventAnalytics(daftarRsvp));
+      if (eventBerbayar(e)) {
+        setPendapatan(ringkasPendapatan(await pembayaranService.untukEvent(id)));
+      }
       setReviews(await reviewService.getReviews(id));
       setLoading(false);
     };
@@ -105,6 +111,18 @@ export function EventAnalytics() {
         <StatCard icon={<Hourglass size={20} />} label="Daftar Tunggu" value={analytics.waitlist} accent="bg-stiker" />
       </div>
 
+      {pendapatan && (
+        <section className="mading-card p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="font-editorial font-extrabold text-xl text-ink">Pendapatan tiket</h3>
+            <p className="text-sm text-ink/70">Dari {pendapatan.lunas} pembayaran lunas lewat Midtrans.</p>
+          </div>
+          <p className="font-editorial text-4xl font-extrabold text-ink tabular-nums">
+            {formatRupiah(pendapatan.total)}
+          </p>
+        </section>
+      )}
+
       <section className="mading-card p-6 sm:p-8 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-editorial font-extrabold text-xl text-ink flex items-center gap-2">
@@ -154,6 +172,16 @@ export function EventAnalytics() {
           <p className="text-sm text-ink/70">Program studi belum tercatat untuk peserta event ini.</p>
         )}
       </section>
+
+      {analytics.pesertaUmum > 0 && (
+        <section className="mading-card p-6 sm:p-8">
+          <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Asal Peserta</h3>
+          <SimpleBarChart data={analytics.byAsal} color="bg-pulpen" />
+          <p className="text-sm text-ink/70 mt-4">
+            {analytics.pesertaUmum} dari {analytics.registered} peserta terdaftar berasal dari luar UIR.
+          </p>
+        </section>
+      )}
 
       <section className="mading-card p-6 sm:p-8">
         <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Timeline Pendaftaran</h3>

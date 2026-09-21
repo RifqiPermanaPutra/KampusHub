@@ -112,7 +112,9 @@ export function TicketScanner() {
       setScanResult({ status: 'success', message: 'Berhasil check-in secara manual.' });
     } catch (err) {
       console.error(err);
-      setScanResult({ status: 'error', message: 'Gagal melakukan check-in. Silakan coba lagi.' });
+      // Sama dengan jalur scan kamera: sebutkan alasan dari database.
+      const sebab = err instanceof Error ? err.message : 'Silakan coba lagi.';
+      setScanResult({ status: 'error', message: `Gagal check-in. ${sebab}` });
     }
   };
 
@@ -126,7 +128,7 @@ export function TicketScanner() {
 
   if (!event) return null;
 
-  const phase = getEventPhase(event.date);
+  const phase = getEventPhase(event);
   const attendees = rsvps.filter(r => r.status !== 'waitlist');
   const checkedInCount = rsvps.filter(r => r.status === 'checked-in').length;
   const progress = attendees.length ? (checkedInCount / attendees.length) * 100 : 0;

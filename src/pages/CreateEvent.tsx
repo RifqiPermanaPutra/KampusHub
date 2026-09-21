@@ -10,6 +10,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { eventService } from '../services/eventService';
 import { aiService } from '../services/aiService';
 import { posterService } from '../services/posterService';
+import { GambarPoster } from '../components/ui/GambarPoster';
+import { SARAN_UKURAN_POSTER } from '../lib/poster';
+import { validasiHarga } from '../lib/pembayaran';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { dariInputLokal, keInputLokal } from '../lib/waktu-lokal';
@@ -35,6 +38,7 @@ export function CreateEvent() {
   const [error, setError] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [mengunggahPoster, setMengunggahPoster] = useState(false);
+  const [infoPoster, setInfoPoster] = useState('');
   // Status dan alasan penolakan event yang sedang diedit. Event yang ditolak
   // otomatis diajukan ulang begitu perbaikannya disimpan.
   const [statusAsal, setStatusAsal] = useState<EventStatus | null>(null);
@@ -45,10 +49,13 @@ export function CreateEvent() {
     description: '',
     category: CATEGORIES[0],
     date: '',
+    endDate: '',
     location: '',
     posterUrl: '',
     capacity: '',
     rsvpDeadline: '',
+    terbukaUmum: false,
+    harga: '',
   });
 
   useEffect(() => {
@@ -65,9 +72,12 @@ export function CreateEvent() {
               // datetime-local hanya menerima "yyyy-MM-ddTHH:mm". Tanpa
               // penerjemahan ini kolom tanggal tampil kosong saat mengedit.
               date: keInputLokal(event.date),
+              endDate: keInputLokal(event.endDate),
               location: event.location,
               posterUrl: event.posterUrl || '',
               capacity: event.capacity?.toString() || '',
+              terbukaUmum: event.terbukaUmum ?? false,
+              harga: event.harga ? String(event.harga) : '',
               rsvpDeadline: keInputLokal(event.rsvpDeadline),
             });
             setStatusAsal(event.status);
@@ -88,6 +98,17 @@ export function CreateEvent() {
     e.preventDefault();
     if (!profile) return;
 
+    if (new Date(formData.endDate) <= new Date(formData.date)) {
+      setError('Waktu selesai harus setelah waktu mulai.');
+      return;
+    }
+
+    const galatHargaKirim = validasiHarga(formData.harga);
+    if (galatHargaKirim) {
+      setError(galatHargaKirim);
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -96,6 +117,7 @@ export function CreateEvent() {
         // Nilai input tidak membawa zona waktu. Tanpa diterjemahkan, Postgres
         // membacanya sebagai UTC dan event bergeser tujuh jam dari yang dimaksud.
         date: dariInputLokal(formData.date),
+        endDate: dariInputLokal(formData.endDate),
         /*
          * Isian kosong dikirim sebagai 0 dan teks kosong, bukan undefined.
          * eventToRow melewati field yang undefined, sehingga kuota atau batas
@@ -104,6 +126,9 @@ export function CreateEvent() {
          */
         capacity: formData.capacity ? parseInt(formData.capacity) : 0,
         rsvpDeadline: dariInputLokal(formData.rsvpDeadline),
+        // Kosong berarti gratis. Nominal ini hanya disimpan; yang ditagih
+        // Midtrans selalu dibaca ulang dari database oleh server.
+        harga: formData.harga.trim() ? parseInt(formData.harga, 10) : 0,
       };
 
       if (isEditing && id) {
@@ -141,8 +166,9 @@ export function CreateEvent() {
     setMengunggahPoster(true);
     try {
       // Ukuran dan format diperiksa posterService sebelum berkas dikirim.
-      const url = await posterService.upload(profile.uid, file);
-      setFormData(prev => ({ ...prev, posterUrl: url }));
+      const poster = await posterService.upload(profile.uid, file);
+      setFormData(prev => ({ ...prev, posterUrl: poster.url }));
+      setInfoPoster(`${poster.lebar} × ${poster.tinggi} px`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengunggah poster. Coba lagi.');
     } finally {
@@ -181,6 +207,12 @@ export function CreateEvent() {
     formData.rsvpDeadline && formData.date && new Date(formData.rsvpDeadline) > new Date(formData.date)
   );
 
+  const selesaiSebelumMulai = Boolean(
+    formData.endDate && formData.date && new Date(formData.endDate) <= new Date(formData.date)
+  );
+
+  const galatHarga = validasiHarga(formData.harga);
+
   // Data tiruan untuk pratinjau kartu poster selama form diisi.
 
   const capacity = formData.capacity ? parseInt(formData.capacity) : undefined;
@@ -190,6 +222,7 @@ export function CreateEvent() {
     description: formData.description,
     category: formData.category,
     date: dariInputLokal(formData.date) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: dariInputLokal(formData.endDate) || undefined,
     location: formData.location || 'Lokasi event',
     posterUrl: formData.posterUrl || undefined,
     status: 'pending',
@@ -199,6 +232,8 @@ export function CreateEvent() {
     capacity,
     attendeeCount: capacity ? 0 : undefined,
     rsvpDeadline: dariInputLokal(formData.rsvpDeadline) || undefined,
+    terbukaUmum: formData.terbukaUmum,
+    harga: galatHarga ? 0 : Number(formData.harga.trim() || 0),
   };
 
   const labelSimpan = !isEditing
@@ -266,26 +301,39 @@ export function CreateEvent() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1.5">
-                <label htmlFor="event-category" className={fieldLabel}>Kategori</label>
-                <select
-                  id="event-category"
-                  className={`${fieldBox} py-2.5`}
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                >
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <label htmlFor="event-category" className={fieldLabel}>Kategori</label>
+              <select
+                id="event-category"
+                className={`${fieldBox} py-2.5`}
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              >
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
 
-              <Input
-                type="datetime-local"
-                label="Tanggal & Waktu"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  type="datetime-local"
+                  label="Waktu Mulai"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  required
+                />
+                <Input
+                  type="datetime-local"
+                  label="Waktu Selesai"
+                  value={formData.endDate}
+                  min={formData.date || undefined}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  required
+                />
+              </div>
+              {selesaiSebelumMulai && (
+                <p className="mading-alert">Waktu selesai harus setelah waktu mulai.</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -308,6 +356,54 @@ export function CreateEvent() {
 
             <div className="space-y-1.5">
               <Input
+                label="Harga Tiket (Rp)"
+                type="number"
+                min={0}
+                step={500}
+                inputMode="numeric"
+                placeholder="Kosongkan untuk event gratis"
+                value={formData.harga}
+                onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
+              />
+              <p className="text-xs text-ink/60">
+                Kosongkan untuk event gratis. Event berbayar dibayar lewat Midtrans (QRIS, transfer bank,
+                e-wallet), tidak punya daftar tunggu, dan tidak bisa dibatalkan peserta setelah lunas.
+                Harga tidak bisa diubah lagi setelah ada yang membayar.
+              </p>
+              {galatHarga && <p className="mading-alert">{galatHarga}</p>}
+            </div>
+
+            <fieldset className="space-y-2">
+              <legend className={`${fieldLabel} mb-2`}>Siapa yang boleh mendaftar</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  { nilai: false, judul: 'Khusus mahasiswa UIR', keterangan: 'Hanya akun mahasiswa UIR yang bisa mendaftar.' },
+                  { nilai: true, judul: 'Terbuka untuk umum', keterangan: 'Siswa, mahasiswa kampus lain, dan masyarakat ikut bisa mendaftar.' },
+                ].map(pilihan => (
+                  <label
+                    key={String(pilihan.nilai)}
+                    className={`flex cursor-pointer gap-3 rounded-lg border-2 border-ink p-3 transition-shadow motion-reduce:transition-none ${
+                      formData.terbukaUmum === pilihan.nilai ? 'bg-stabilo shadow-sticker' : 'bg-white'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="terbuka-umum"
+                      checked={formData.terbukaUmum === pilihan.nilai}
+                      onChange={() => setFormData({ ...formData, terbukaUmum: pilihan.nilai })}
+                      className="mt-1 h-4 w-4 shrink-0 accent-ink"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-bold text-ink">{pilihan.judul}</span>
+                      <span className="block text-xs text-ink/70">{pilihan.keterangan}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="space-y-1.5">
+              <Input
                 label="Batas Waktu Pendaftaran (Opsional)"
                 type="datetime-local"
                 value={formData.rsvpDeadline}
@@ -326,9 +422,11 @@ export function CreateEvent() {
               <label htmlFor="event-poster" className={fieldLabel}>Gambar Event / Poster (Opsional)</label>
               <div className="mt-2 flex items-center gap-4">
                 {formData.posterUrl && (
-                  <div className="w-16 h-16 rounded-lg border-2 border-ink overflow-hidden bg-white shrink-0">
-                    <img src={formData.posterUrl} alt="Pratinjau poster" className="w-full h-full object-cover" />
-                  </div>
+                  <GambarPoster
+                    src={formData.posterUrl}
+                    alt="Pratinjau poster"
+                    className="w-20 h-20 rounded-lg border-2 border-ink shrink-0"
+                  />
                 )}
                 <input
                   id="event-poster"
@@ -342,7 +440,9 @@ export function CreateEvent() {
               <p className="text-xs text-ink/60 mt-1" aria-live="polite">
                 {mengunggahPoster
                   ? 'Mengunggah poster...'
-                  : 'JPG, PNG, atau WebP, maksimal 2 MB. Tanpa gambar, poster dibuat otomatis dari warna kategori.'}
+                  : `${SARAN_UKURAN_POSTER}${infoPoster
+                      ? ` Poster terunggah: ${infoPoster}.`
+                      : ' Tanpa gambar, poster dibuat otomatis dari warna kategori.'}`}
               </p>
             </div>
           </div>

@@ -4,7 +4,7 @@
  */
 
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, Bell, Bookmark, User, LogOut, LayoutDashboard, Ticket, X } from 'lucide-react';
+import { Home, Calendar, Bell, Bookmark, User, LogOut, LayoutDashboard, Ticket, X, Award } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import { Avatar } from './ui/Avatar';
@@ -24,6 +24,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     { to: '/', label: 'Beranda', icon: Home },
     { to: '/explore', label: 'Jelajahi Event', icon: Calendar },
     { to: '/my-rsvps', label: 'Pendaftaran Saya', icon: Ticket },
+    { to: '/sertifikat-saya', label: 'Sertifikat Saya', icon: Award },
     { to: '/saved', label: 'Disimpan', icon: Bookmark },
     { to: '/notifications', label: 'Notifikasi', icon: Bell },
     { to: '/profile', label: 'Profil', icon: User },

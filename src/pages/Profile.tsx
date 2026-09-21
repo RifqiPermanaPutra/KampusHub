@@ -16,6 +16,11 @@ import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { profileService } from '../services/profileService';
 import { Avatar } from '../components/ui/Avatar';
+import { Select } from '../components/ui/Select';
+import { PilihJenisPeserta } from '../components/PilihJenisPeserta';
+import { jenisPesertaProfil, labelJenisPeserta } from '../lib/peserta';
+import { DAFTAR_FAKULTAS, pilihanAngkatan, prodiDariFakultas } from '../lib/fakultas';
+import { JenisPeserta } from '../types';
 
 function StatTile({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
   const shown = useCountUp(value);
@@ -36,6 +41,11 @@ export function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile?.name || '');
   const [bio, setBio] = useState(profile?.bio || '');
+  const [jenis, setJenis] = useState<JenisPeserta>(jenisPesertaProfil(profile));
+  const [fakultas, setFakultas] = useState(profile?.fakultas || '');
+  const [jurusan, setJurusan] = useState(profile?.jurusan || '');
+  const [angkatan, setAngkatan] = useState(profile?.angkatan || '');
+  const [asalInstansi, setAsalInstansi] = useState(profile?.asalInstansi || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [rekap, setRekap] = useState({ total: 0, hadir: 0, waitlist: 0 });
@@ -63,6 +73,22 @@ export function Profile() {
     });
     return () => { batal = true; };
   }, [profile?.uid]);
+
+  /*
+   * Profil bisa berubah dari luar halaman ini, misalnya setelah admin menyetujui
+   * pengajuan panitia. Selama tidak sedang menyunting, isian form mengikuti profil
+   * terbaru, supaya penyimpanan berikutnya tidak menimpanya dengan nilai lama.
+   */
+  useEffect(() => {
+    if (!profile || isEditing) return;
+    setName(profile.name);
+    setBio(profile.bio || '');
+    setJenis(jenisPesertaProfil(profile));
+    setFakultas(profile.fakultas || '');
+    setJurusan(profile.jurusan || '');
+    setAngkatan(profile.angkatan || '');
+    setAsalInstansi(profile.asalInstansi || '');
+  }, [profile, isEditing]);
 
   if (!profile) return null;
 
@@ -93,10 +119,26 @@ export function Profile() {
   };
 
   const handleSave = async () => {
+    // Tanpa asal instansi, pendaftaran ke event nanti ditolak database.
+    if (jenis === 'umum' && !asalInstansi.trim()) {
+      setError('Isi asal instansi dulu supaya panitia tahu Anda mewakili siapa.');
+      return;
+    }
+
     setSaving(true);
     setError('');
     try {
-      await profileService.updateProfile(profile.uid, { name, bio });
+      await profileService.updateProfile(profile.uid, {
+        name,
+        bio,
+        // Hanya kolom yang sesuai jenis peserta yang disimpan, sisanya
+        // dikosongkan supaya tidak ada peserta umum yang masih berfakultas.
+        jenisPeserta: jenis,
+        fakultas: jenis === 'uir' ? fakultas : '',
+        jurusan: jenis === 'uir' ? jurusan : '',
+        angkatan: jenis === 'uir' ? angkatan : '',
+        asalInstansi: jenis === 'umum' ? asalInstansi.trim() : '',
+      });
       await reloadProfile();
       setIsEditing(false);
     } catch (error) {
@@ -110,10 +152,29 @@ export function Profile() {
   const handleCancel = () => {
     setName(profile.name);
     setBio(profile.bio || '');
+    setJenis(jenisPesertaProfil(profile));
+    setFakultas(profile.fakultas || '');
+    setJurusan(profile.jurusan || '');
+    setAngkatan(profile.angkatan || '');
+    setAsalInstansi(profile.asalInstansi || '');
     setIsEditing(false);
   };
 
-  const bolehMengajukan = profile.role === 'mahasiswa' && profile.pengajuanPanitia !== 'menunggu';
+  const gantiFakultas = (baru: string) => {
+    setFakultas(baru);
+    setJurusan('');
+  };
+
+  const pesertaUmum = jenisPesertaProfil(profile) === 'umum';
+  /*
+   * Database menolak pengajuan panitia dari akun umum. Kalau pilihan ini
+   * dibiarkan terbuka saat pengajuan masih menggantung, penyimpanan profil akan
+   * gagal dengan pesan yang tidak nyambung dengan apa yang sedang dilakukan.
+   */
+  const jenisTerkunci = profile.role !== 'mahasiswa' || profile.pengajuanPanitia === 'menunggu';
+  // Penyelenggara event kampus adalah organisasi kampus, dan admin tidak punya
+  // cara memverifikasi pemohon dari luar. Aturan yang sama ada di database.
+  const bolehMengajukan = profile.role === 'mahasiswa' && !pesertaUmum && profile.pengajuanPanitia !== 'menunggu';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -158,6 +219,52 @@ export function Profile() {
             {isEditing ? (
               <div className="space-y-4">
                 <Input label="Nama Tampilan" value={name} onChange={e => setName(e.target.value)} />
+                <PilihJenisPeserta
+                  nilai={jenis}
+                  onGanti={setJenis}
+                  label="Saya adalah"
+                  disabled={jenisTerkunci}
+                />
+                {jenisTerkunci && (
+                  <p className="text-xs text-ink/60">
+                    {profile.role !== 'mahasiswa'
+                      ? 'Akun panitia dan admin selalu warga kampus, jadi pilihan ini terkunci.'
+                      : 'Pilihan ini terkunci selama pengajuan panitia Anda menunggu keputusan admin.'}
+                  </p>
+                )}
+                {jenis === 'uir' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Select
+                      label="Fakultas"
+                      kosong="Pilih fakultas"
+                      pilihan={DAFTAR_FAKULTAS}
+                      value={fakultas}
+                      onChange={e => gantiFakultas(e.target.value)}
+                    />
+                    <Select
+                      label="Program Studi"
+                      kosong={fakultas ? 'Pilih program studi' : 'Pilih fakultas dulu'}
+                      pilihan={prodiDariFakultas(fakultas)}
+                      value={jurusan}
+                      onChange={e => setJurusan(e.target.value)}
+                      disabled={!fakultas}
+                    />
+                    <Select
+                      label="Tahun Angkatan"
+                      kosong="Pilih tahun angkatan"
+                      pilihan={pilihanAngkatan(new Date().getFullYear())}
+                      value={angkatan}
+                      onChange={e => setAngkatan(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    label="Asal Instansi"
+                    placeholder="Contoh: SMA N 1 Pekanbaru"
+                    value={asalInstansi}
+                    onChange={e => setAsalInstansi(e.target.value)}
+                  />
+                )}
                 <div className="space-y-1.5">
                   <label htmlFor="profile-bio" className="block text-xs font-bold text-ink uppercase tracking-wider">Bio</label>
                   <textarea
@@ -176,16 +283,25 @@ export function Profile() {
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="editorial-title text-4xl sm:text-5xl text-ink">{profile.name}</h2>
                   <Badge variant={profile.role === 'admin' ? 'red' : profile.role === 'panitia' ? 'purple' : 'yellow'}>
-                    {profile.role}
+                    {profile.role === 'mahasiswa' && pesertaUmum ? 'peserta umum' : profile.role}
                   </Badge>
                 </div>
                 <p className="text-lg text-ink/70 font-medium">
                   {profile.role === 'mahasiswa'
-                    ? [profile.jurusan, profile.fakultas].filter(Boolean).join(' • ') || 'Mahasiswa'
+                    ? pesertaUmum
+                      ? [labelJenisPeserta('umum'), profile.asalInstansi].filter(Boolean).join(' • ')
+                      : [profile.jurusan, profile.fakultas].filter(Boolean).join(' • ') || 'Mahasiswa'
                     : profile.role === 'panitia'
                       ? [profile.jabatan, profile.organisasi].filter(Boolean).join(' • ') || 'Panitia Event'
                       : 'Administrator KampusHub'}
                 </p>
+
+                {pesertaUmum && (
+                  <p className="mading-note">
+                    Akun peserta umum bisa mendaftar ke event yang dibuka untuk umum. Penyelenggara event
+                    harus organisasi kampus, jadi pengajuan panitia hanya untuk mahasiswa UIR.
+                  </p>
+                )}
 
                 {profile.pengajuanPanitia === 'menunggu' && (
                   <p className="mading-note" role="status">
@@ -303,9 +419,10 @@ export function Profile() {
               </div>
               <p className="editorial-title text-2xl text-ink">Data yang dibagikan</p>
               <p className="text-sm text-ink/80 font-medium">
-                Saat Anda mendaftar ke sebuah event, nama Anda muncul di daftar peserta event itu dan bisa
-                dilihat pengguna lain yang membukanya. Panitia event juga menerima fakultas, program studi,
-                dan angkatan Anda untuk rekap kehadiran. Email dan nomor telepon tidak dibagikan ke panitia event.
+                Saat Anda mendaftar ke sebuah event, panitia event itu menerima nama Anda beserta
+                {pesertaUmum ? ' asal instansi' : ' fakultas, program studi, dan angkatan'} untuk rekap
+                kehadiran. Peserta lain tidak bisa melihat daftar pendaftar. Email dan nomor telepon tidak
+                dibagikan ke panitia event.
               </p>
             </div>
           </div>

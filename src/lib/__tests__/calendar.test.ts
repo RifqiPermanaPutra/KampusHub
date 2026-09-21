@@ -42,8 +42,16 @@ describe('buildEventIcs', () => {
     expect(ics).toContain('END:VCALENDAR');
   });
 
-  it('memberi DTEND sesuai asumsi durasi 4 jam', () => {
+  it('memakai durasi bawaan 4 jam kalau waktu selesai kosong', () => {
     expect(ics).toContain('DTEND:20260918T100000Z');
+  });
+
+  it('memakai waktu selesai event kalau tersedia', () => {
+    const icsSelesai = buildEventIcs(
+      { ...event, endDate: '2026-09-18T08:30:00.000Z' },
+      new Date('2026-09-10T00:00:00.000Z'),
+    );
+    expect(icsSelesai).toContain('DTEND:20260918T083000Z');
   });
 
   it('meng-escape judul dan lokasi', () => {

@@ -51,7 +51,7 @@ export function ReviewSection({
   }, [reviews, profile?.uid]);
 
   // Bagian ini tidak relevan sebelum event selesai.
-  if (getEventPhase(event.date) !== 'past') return null;
+  if (getEventPhase(event) !== 'past') return null;
 
   const bolehMenilai = profile ? canReviewEvent(event, myRsvp) : false;
   const jumlah = reviews.length;

@@ -10,6 +10,7 @@ import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { runReminderCheck } from '../lib/reminder';
+import { BatasGalat } from './BatasGalat';
 
 export function Layout() {
   const { profile } = useAuth();
@@ -48,7 +49,10 @@ export function Layout() {
         >
           {/* key per rute: setiap pindah halaman, isi masuk dengan animasi singkat */}
           <div key={location.pathname} className="page-enter">
-            <Outlet />
+            {/* Di dalam div berkunci rute: pindah halaman otomatis memulihkan tampilan. */}
+            <BatasGalat>
+              <Outlet />
+            </BatasGalat>
           </div>
         </div>
       </main>

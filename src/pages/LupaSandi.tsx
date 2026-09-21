@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { usePageTitle } from '../lib/usePageTitle';
 import { AuthShell } from '../components/AuthShell';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { JEDA_KIRIM_ULANG_DETIK, detikTersisa } from '../lib/sandi';
 
 export function LupaSandi() {
   usePageTitle('Lupa Kata Sandi');
@@ -18,12 +19,27 @@ export function LupaSandi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Jeda sebelum boleh meminta tautan lagi. Detak per detik hanya berjalan
+  // selama jeda aktif, untuk memperbarui hitung mundurnya.
+  const [jedaSampai, setJedaSampai] = useState(0);
+  const [, setDetak] = useState(0);
+  const sisaJeda = detikTersisa(jedaSampai);
+  const jedaAktif = sisaJeda > 0;
+
+  useEffect(() => {
+    if (!jedaAktif) return;
+    const timer = setInterval(() => setDetak(d => d + 1), 1000);
+    return () => clearInterval(timer);
+  }, [jedaAktif]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (jedaAktif) return;
     setLoading(true);
     setError('');
     try {
       await authService.requestPasswordReset(email.trim());
+      setJedaSampai(Date.now() + JEDA_KIRIM_ULANG_DETIK * 1000);
       setTerkirim(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengirim tautan. Coba lagi.');
@@ -67,8 +83,8 @@ export function LupaSandi() {
 
           {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 
-          <Button type="submit" className="w-full py-4 text-lg" loading={loading}>
-            Kirim Tautan
+          <Button type="submit" className="w-full py-4 text-lg" loading={loading} disabled={jedaAktif}>
+            {jedaAktif ? `Kirim lagi dalam ${sisaJeda} detik` : 'Kirim Tautan'}
           </Button>
         </form>
       )}

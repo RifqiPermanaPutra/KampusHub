@@ -15,6 +15,21 @@ import { cn } from '../lib/utils';
 import { getQuotaSticker } from './EventCard';
 import { getEventPhase, phaseSummary } from '../lib/event-phase';
 import { PhaseTag } from './ui/PhaseTag';
+import { GambarPoster } from './ui/GambarPoster';
+
+/**
+ * Foto poster yang "ditempel" di sisi kanan slide. Poster wajib 16:9, jadi
+ * bingkainya juga 16:9 dan gambarnya tampil penuh tanpa terpotong. Poster
+ * berada di kolomnya sendiri, bukan melayang di atas teks, supaya judul yang
+ * panjang tidak tertimpa.
+ */
+function PosterTempel({ src }: { src: string }) {
+  return (
+    <div className="tape relative hidden md:block w-[44%] max-w-md shrink-0 self-center rotate-2 border-2 border-ink bg-white p-1.5 shadow-sticker motion-reduce:rotate-0">
+      <GambarPoster src={src} className="aspect-video w-full" />
+    </div>
+  );
+}
 
 const AUTO_SLIDE_INTERVAL = 5000; // 5 seconds
 
@@ -72,7 +87,7 @@ export function FeaturedSlider({ events }: { events: Event[] }) {
   const activeIndex = currentIndex < slideCount ? currentIndex : 0;
   const event = events[activeIndex];
   const date = new Date(event.date);
-  const phase = getEventPhase(event.date);
+  const phase = getEventPhase(event);
   const isPast = phase === 'past';
   const isLive = phase === 'live';
   const style = getCategoryStyle(event.category);
@@ -118,32 +133,28 @@ export function FeaturedSlider({ events }: { events: Event[] }) {
         >
           <Link
             to={`/event/${event.id}`}
-            className={cn('relative flex h-full w-full items-end overflow-hidden p-6 pb-20 sm:p-10 sm:pb-20', style.poster, style.text)}
+            className={cn('relative flex h-full w-full items-end justify-between gap-8 overflow-hidden p-6 pb-20 sm:p-10 sm:pb-20', style.poster, style.text)}
           >
             {/* Ornamen lingkaran ala poster sablon */}
             <span className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full border-2 border-current opacity-30" aria-hidden="true" />
             <span className="pointer-events-none absolute right-28 -bottom-28 h-56 w-56 rounded-full border-2 border-current opacity-20" aria-hidden="true" />
 
             {/* Foto poster "ditempel" miring di sisi kanan */}
-            {event.posterUrl && (
-              <div className="tape absolute right-10 top-10 hidden md:block w-40 h-52 rotate-3 border-2 border-ink bg-white p-1.5 shadow-sticker">
-                <img
-                  src={event.posterUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            )}
-
-            <div className={cn('relative z-10 max-w-xl space-y-4', event.posterUrl && 'md:pr-44')}>
+            <div className="relative z-10 min-w-0 max-w-xl flex-1 space-y-4">
               <div className="flex flex-wrap gap-2">
                 <PhaseTag phase={phase} />
                 <span className="sticker">{event.category}</span>
                 {quotaSticker && <span className="sticker bg-spidol">{quotaSticker}</span>}
+                {event.terbukaUmum && <span className="sticker bg-daun">Terbuka untuk umum</span>}
               </div>
 
-              <h3 className="editorial-title text-3xl sm:text-4xl lg:text-5xl leading-[0.95] line-clamp-3">
+              <h3
+                className={cn(
+                  'editorial-title leading-[0.95] line-clamp-3 break-words',
+                  // Kolom teks lebih sempit saat ada poster, jadi hurufnya ikut mengecil.
+                  event.posterUrl ? 'text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl lg:text-5xl'
+                )}
+              >
                 {event.title}
               </h3>
 
@@ -159,11 +170,13 @@ export function FeaturedSlider({ events }: { events: Event[] }) {
                 {!isPast && (
                   <span className="flex items-center gap-2">
                     <Clock size={16} className="shrink-0" />
-                    {phaseSummary(event.date)}
+                    {phaseSummary(event)}
                   </span>
                 )}
               </div>
             </div>
+
+            {event.posterUrl && <PosterTempel src={event.posterUrl} />}
           </Link>
         </motion.div>
       </AnimatePresence>

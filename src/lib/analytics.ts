@@ -4,6 +4,7 @@
  */
 
 import { RSVP } from '../types';
+import { asalPeserta } from './peserta';
 
 export interface EventAnalytics {
   total: number;
@@ -15,14 +16,18 @@ export interface EventAnalytics {
   byFakultas: { label: string; count: number }[];
   byJurusan: { label: string; count: number }[];
   byAngkatan: { label: string; count: number }[];
+  /** Asal peserta: fakultas untuk mahasiswa UIR, asal instansi untuk peserta umum. */
+  byAsal: { label: string; count: number }[];
+  /** Peserta terdaftar yang berasal dari luar UIR. */
+  pesertaUmum: number;
   /** Jumlah pendaftaran per hari (kunci ISO yyyy-mm-dd), terurut naik. */
   timeline: { date: string; count: number }[];
 }
 
-function countBy(rsvps: RSVP[], key: 'fakultas' | 'jurusan' | 'angkatan') {
+function countBy(rsvps: RSVP[], ambilLabel: (rsvp: RSVP) => string) {
   const counts = new Map<string, number>();
   for (const r of rsvps) {
-    const label = r[key] || 'Tidak diketahui';
+    const label = ambilLabel(r) || 'Tidak diketahui';
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   return [...counts.entries()]
@@ -52,9 +57,11 @@ export function buildEventAnalytics(rsvps: RSVP[]): EventAnalytics {
     attendanceRate: registeredList.length > 0
       ? Math.round((checkedIn / registeredList.length) * 100)
       : 0,
-    byFakultas: countBy(registeredList, 'fakultas'),
-    byJurusan: countBy(registeredList, 'jurusan'),
-    byAngkatan: countBy(registeredList, 'angkatan'),
+    byFakultas: countBy(registeredList, r => r.fakultas ?? ''),
+    byJurusan: countBy(registeredList, r => r.jurusan ?? ''),
+    byAngkatan: countBy(registeredList, r => r.angkatan ?? ''),
+    byAsal: countBy(registeredList, asalPeserta),
+    pesertaUmum: registeredList.filter(r => r.jenisPeserta === 'umum').length,
     timeline,
   };
 }
@@ -73,6 +80,8 @@ export interface CampusAnalytics {
   eventMendatang: number;
   totalPendaftar: number;
   totalHadir: number;
+  /** Peserta terdaftar dari luar UIR. Kosong kalau migrasi 09 belum dijalankan. */
+  pesertaUmum?: number;
   /** Rata-rata tingkat kehadiran seluruh event yang sudah selesai (0-100). */
   rataKehadiran: number;
   kategoriTerpopuler: { label: string; count: number }[];

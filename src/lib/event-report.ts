@@ -112,16 +112,16 @@ export function downloadEventReport(event: Event, rsvps: RSVP[], reviews: Review
     y += 16;
   }
 
-  // Sebaran fakultas
-  if (stat.byFakultas.length > 0) {
+  // Sebaran asal peserta: fakultas untuk mahasiswa UIR, instansi untuk peserta umum.
+  if (stat.byAsal.length > 0) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(11);
     pdf.setTextColor(...INK);
-    pdf.text('Peserta per fakultas', margin, y);
+    pdf.text('Asal peserta', margin, y);
     y += 6;
 
-    const maks = Math.max(...stat.byFakultas.map(f => f.count));
-    for (const f of stat.byFakultas.slice(0, 6)) {
+    const maks = Math.max(...stat.byAsal.map(f => f.count));
+    for (const f of stat.byAsal.slice(0, 6)) {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(...INK);

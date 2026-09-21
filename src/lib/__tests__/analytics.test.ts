@@ -95,3 +95,40 @@ describe('buildEventAnalytics: program studi', () => {
     expect(a.byJurusan).toEqual([{ label: 'Teknik Sipil', count: 1 }]);
   });
 });
+
+describe('buildEventAnalytics: asal peserta', () => {
+  const buat = (id: string, isi: Partial<RsvpUji>): RsvpUji => ({
+    id,
+    userId: id,
+    userName: id,
+    eventId: 'e1',
+    createdAt: '2026-09-01T00:00:00Z',
+    status: 'registered',
+    ...isi,
+  });
+
+  it('mengelompokkan mahasiswa UIR per fakultas dan peserta umum per instansi', () => {
+    const a = buildEventAnalytics([
+      buat('a', { jenisPeserta: 'uir', fakultas: 'Teknik' }),
+      buat('b', { jenisPeserta: 'umum', asalInstansi: 'SMA N 1 Pekanbaru' }),
+      buat('c', { jenisPeserta: 'umum', asalInstansi: 'SMA N 1 Pekanbaru' }),
+    ]);
+    expect(a.byAsal[0]).toEqual({ label: 'SMA N 1 Pekanbaru', count: 2 });
+    expect(a.byAsal.find(x => x.label === 'Teknik')?.count).toBe(1);
+    expect(a.pesertaUmum).toBe(2);
+  });
+
+  it('tidak menghitung peserta daftar tunggu sebagai peserta umum', () => {
+    const a = buildEventAnalytics([
+      buat('a', { jenisPeserta: 'umum', asalInstansi: 'Komunitas Riau Dev', status: 'waitlist' }),
+      buat('b', { jenisPeserta: 'uir', fakultas: 'Hukum' }),
+    ]);
+    expect(a.pesertaUmum).toBe(0);
+    expect(a.byAsal).toEqual([{ label: 'Hukum', count: 1 }]);
+  });
+
+  it('memberi label Umum untuk peserta umum yang asal instansinya kosong', () => {
+    const a = buildEventAnalytics([buat('a', { jenisPeserta: 'umum' })]);
+    expect(a.byAsal).toEqual([{ label: 'Umum', count: 1 }]);
+  });
+});

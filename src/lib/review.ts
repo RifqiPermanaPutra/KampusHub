@@ -15,7 +15,7 @@ export const MAX_RATING = 5;
  */
 export function canReviewEvent(event: Event, rsvp: RSVP | null, now: number = Date.now()): boolean {
   if (!rsvp || rsvp.status !== 'checked-in') return false;
-  return getEventPhase(event.date, now) === 'past';
+  return getEventPhase(event, now) === 'past';
 }
 
 /** Rata-rata rating dari agregat di dokumen event; null kalau belum ada ulasan. */

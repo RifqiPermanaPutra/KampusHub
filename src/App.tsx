@@ -10,6 +10,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { Layout } from './components/Layout';
 import { Guard } from './components/Guard';
 import { PageLoader } from './components/PageLoader';
+import { BatasGalat } from './components/BatasGalat';
 import { SetupNotice } from './components/SetupNotice';
 import { konfigurasiSupabaseAda } from './lib/supabase';
 
@@ -32,6 +33,8 @@ const MyRSVPs = lazy(() => import('./pages/MyRSVPs').then(m => ({ default: m.MyR
 const SavedEvents = lazy(() => import('./pages/SavedEvents').then(m => ({ default: m.SavedEvents })));
 const TicketScanner = lazy(() => import('./pages/TicketScanner').then(m => ({ default: m.TicketScanner })));
 const EventAnalytics = lazy(() => import('./pages/EventAnalytics').then(m => ({ default: m.EventAnalytics })));
+const SertifikatEvent = lazy(() => import('./pages/SertifikatEvent').then(m => ({ default: m.SertifikatEvent })));
+const SertifikatSaya = lazy(() => import('./pages/SertifikatSaya').then(m => ({ default: m.SertifikatSaya })));
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate').then(m => ({ default: m.VerifyCertificate })));
 const LupaSandi = lazy(() => import('./pages/LupaSandi').then(m => ({ default: m.LupaSandi })));
 const AturSandi = lazy(() => import('./pages/AturSandi').then(m => ({ default: m.AturSandi })));
@@ -46,6 +49,8 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
         <Suspense fallback={<PageLoader />}>
+        {/* Jaring terakhir untuk halaman di luar Layout, seperti Daftar dan Verifikasi. */}
+        <BatasGalat>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -53,6 +58,8 @@ export default function App() {
           <Route path="/lupa-sandi" element={<LupaSandi />} />
           {/* Tidak dibungkus Guard: sesinya baru terpasang dari token di URL. */}
           <Route path="/atur-sandi" element={<AturSandi />} />
+          {/* Tidak dibungkus Guard: tautannya tercetak di sertifikat dan dibuka pihak luar tanpa akun. */}
+          <Route path="/verify/:code" element={<VerifyCertificate />} />
           <Route path="/complete-profile" element={<Guard><CompleteProfile /></Guard>} />
 
           {/* Protected Routes */}
@@ -61,13 +68,14 @@ export default function App() {
             <Route path="/explore" element={<Guard><ExploreEvents /></Guard>} />
             <Route path="/event/:id" element={<Guard><EventDetail /></Guard>} />
             <Route path="/my-rsvps" element={<Guard><MyRSVPs /></Guard>} />
+            <Route path="/sertifikat-saya" element={<Guard><SertifikatSaya /></Guard>} />
             <Route path="/saved" element={<Guard><SavedEvents /></Guard>} />
             <Route path="/profile" element={<Guard><Profile /></Guard>} />
             <Route path="/notifications" element={<Guard><Notifications /></Guard>} />
             <Route path="/dashboard" element={<Guard allowedRoles={['admin', 'panitia']}><Dashboard /></Guard>} />
             <Route path="/event/:id/scanner" element={<Guard allowedRoles={['admin', 'panitia']}><TicketScanner /></Guard>} />
             <Route path="/event/:id/analytics" element={<Guard allowedRoles={['admin', 'panitia']}><EventAnalytics /></Guard>} />
-            <Route path="/verify/:code" element={<Guard><VerifyCertificate /></Guard>} />
+            <Route path="/event/:id/sertifikat" element={<Guard allowedRoles={['admin', 'panitia']}><SertifikatEvent /></Guard>} />
 
             {/* Panitia / Admin only */}
             <Route
@@ -90,6 +98,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </BatasGalat>
         </Suspense>
         </ToastProvider>
       </AuthProvider>

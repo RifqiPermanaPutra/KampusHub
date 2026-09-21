@@ -301,8 +301,13 @@ export function Dashboard() {
 
           {kampus.byFakultas.length > 0 && (
             <div className="mading-card p-6">
-              <h4 className="font-editorial font-extrabold text-lg text-ink mb-4">Peserta per fakultas (semua event)</h4>
+              <h4 className="font-editorial font-extrabold text-lg text-ink mb-4">Asal peserta (semua event)</h4>
               <SimpleBarChart data={kampus.byFakultas} color="bg-daun" />
+              {(kampus.pesertaUmum ?? 0) > 0 && (
+                <p className="text-sm text-ink/70 mt-4">
+                  {kampus.pesertaUmum} dari {kampus.totalPendaftar} pendaftar berasal dari luar UIR.
+                </p>
+              )}
             </div>
           )}
 
@@ -338,7 +343,7 @@ export function Dashboard() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="stamp text-ink/70">{format(new Date(event.date), 'dd.MM.yyyy')}</span>
-                  <PhaseTag phase={getEventPhase(event.date)} />
+                  <PhaseTag phase={getEventPhase(event)} />
                 </div>
                 {eventActions(event, canManageEvent(event))}
               </div>
@@ -367,7 +372,7 @@ export function Dashboard() {
                       </td>
                       <td className={cn(td, 'whitespace-nowrap')}>
                         <p className="stamp text-ink/70">{format(new Date(event.date), 'dd.MM.yyyy')}</p>
-                        <PhaseTag phase={getEventPhase(event.date)} className="mt-1.5" />
+                        <PhaseTag phase={getEventPhase(event)} className="mt-1.5" />
                       </td>
                       <td className={cn(td, 'whitespace-nowrap')}>
                         <StatusPill status={event.status} />

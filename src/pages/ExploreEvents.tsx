@@ -12,6 +12,8 @@ import { Button } from '../components/ui/Button';
 import { CATEGORIES } from '../constants';
 import { Search } from 'lucide-react';
 import { EventPhase, getEventPhase } from '../lib/event-phase';
+import { jenisPesertaProfil } from '../lib/peserta';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { usePageTitle } from '../lib/usePageTitle';
 import { EventGridSkeleton } from '../components/ui/Skeleton';
@@ -41,8 +43,15 @@ export function ExploreEvents() {
   usePageTitle('Jelajahi Event');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const { profile } = useAuth();
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORY);
   const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>('semua');
+  /*
+   * Peserta dari luar UIR hanya bisa mendaftar ke event yang dibuka untuk umum,
+   * jadi filternya menyala sejak awal untuk mereka. Chip-nya tetap bisa dimatikan
+   * kalau mereka ingin melihat seluruh kegiatan kampus.
+   */
+  const [hanyaTerbuka, setHanyaTerbuka] = useState(jenisPesertaProfil(profile) === 'umum');
   const [searchQuery, setSearchQuery] = useState('');
   const [tick, setTick] = useState(0);
 
@@ -77,11 +86,12 @@ export function ExploreEvents() {
           e.title.toLowerCase().includes(term) ||
           e.description.toLowerCase().includes(term) ||
           e.location.toLowerCase().includes(term);
-        return matchesCategory && matchesSearch && matchesPhase(getEventPhase(e.date), phaseFilter);
+        const matchesTerbuka = !hanyaTerbuka || e.terbukaUmum === true;
+        return matchesCategory && matchesSearch && matchesTerbuka && matchesPhase(getEventPhase(e), phaseFilter);
       })
       .sort((a, b) => {
-        const phaseA = getEventPhase(a.date);
-        const phaseB = getEventPhase(b.date);
+        const phaseA = getEventPhase(a);
+        const phaseB = getEventPhase(b);
         if (PHASE_ORDER[phaseA] !== PHASE_ORDER[phaseB]) {
           return PHASE_ORDER[phaseA] - PHASE_ORDER[phaseB];
         }
@@ -91,10 +101,10 @@ export function ExploreEvents() {
         return phaseA === 'past' ? tb - ta : ta - tb;
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, categoryFilter, phaseFilter, searchQuery, tick]);
+  }, [events, categoryFilter, phaseFilter, searchQuery, hanyaTerbuka, tick]);
 
   const liveCount = useMemo(
-    () => events.filter(e => getEventPhase(e.date) === 'live').length,
+    () => events.filter(e => getEventPhase(e) === 'live').length,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [events, tick]
   );
@@ -112,6 +122,7 @@ export function ExploreEvents() {
     setCategoryFilter(ALL_CATEGORY);
     setPhaseFilter('semua');
     setSearchQuery('');
+    setHanyaTerbuka(false);
   };
 
   return (
@@ -192,6 +203,17 @@ export function ExploreEvents() {
             );
           })}
         </div>
+
+        <button
+          onClick={() => setHanyaTerbuka(terbuka => !terbuka)}
+          aria-pressed={hanyaTerbuka}
+          className={cn(
+            'whitespace-nowrap rounded-full border-2 border-ink px-4 py-1.5 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+            hanyaTerbuka ? 'bg-daun text-ink' : 'bg-white text-ink hover:bg-stabilo'
+          )}
+        >
+          Terbuka untuk umum
+        </button>
       </div>
 
       {filteredEvents.length > 0 ? (

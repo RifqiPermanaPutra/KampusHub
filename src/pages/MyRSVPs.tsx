@@ -12,6 +12,8 @@ import { Button } from '../components/ui/Button';
 import { StatusPill } from '../components/ui/StatusPill';
 import { isEligibleForCertificate } from '../lib/certificate';
 import { Modal } from '../components/ui/Modal';
+import { KonfirmasiBatalDaftar } from '../components/KonfirmasiBatalDaftar';
+import { eventBerbayar } from '../lib/pembayaran';
 import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { EventGridSkeleton } from '../components/ui/Skeleton';
@@ -41,7 +43,7 @@ function TicketModal({ rsvp, holderName, onClose }: { rsvp: RsvpWithEvent; holde
   const style = getCategoryStyle(event.category);
   const date = new Date(event.date);
   const checkedIn = rsvp.status === 'checked-in';
-  const phase = getEventPhase(event.date);
+  const phase = getEventPhase(event);
 
   return (
     <Modal onClose={onClose} className="max-w-sm p-0" label={`E-tiket ${event.title}`}>
@@ -135,6 +137,7 @@ export function MyRSVPs() {
   const [loading, setLoading] = useState(true);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [ticketModalRsvp, setTicketModalRsvp] = useState<RsvpWithEvent | null>(null);
+  const [konfirmasiBatal, setKonfirmasiBatal] = useState<RsvpWithEvent | null>(null);
   const [error, setError] = useState('');
 
   const handleCancelRSVP = async (eventId: string) => {
@@ -147,7 +150,7 @@ export function MyRSVPs() {
       showToast('Pendaftaran Anda telah dibatalkan.', 'info');
     } catch (err) {
       console.error(err);
-      setError('Gagal membatalkan pendaftaran. Silakan coba lagi.');
+      setError(err instanceof Error ? err.message : 'Gagal membatalkan pendaftaran. Silakan coba lagi.');
     } finally {
       setCancelingId(null);
     }
@@ -210,7 +213,7 @@ export function MyRSVPs() {
           {rsvps.map((rsvp) => {
             const event = rsvp.event!;
             const style = getCategoryStyle(event.category);
-            const phase = getEventPhase(event.date);
+            const phase = getEventPhase(event);
             return (
               <div
                 key={rsvp.id}
@@ -252,36 +255,32 @@ export function MyRSVPs() {
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t-2 border-dashed border-ink/20">
                     <span className="stamp text-ink/60">Mendaftar {format(new Date(rsvp.createdAt), 'dd.MM.yyyy')}</span>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="hover:bg-spidol"
-                        onClick={() => handleCancelRSVP(event.id)}
-                        loading={cancelingId === event.id}
-                        disabled={cancelingId === event.id}
-                      >
-                        Batalkan
-                      </Button>
+                      {/* Event berbayar yang sudah lunas tidak bisa dibatalkan peserta. */}
+                      {!eventBerbayar(event) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="hover:bg-spidol"
+                          onClick={() => setKonfirmasiBatal(rsvp)}
+                          loading={cancelingId === event.id}
+                          disabled={cancelingId === event.id}
+                        >
+                          Batalkan
+                        </Button>
+                      )}
                       {rsvp.status !== 'waitlist' && (
                         <Button size="sm" onClick={() => setTicketModalRsvp(rsvp)}>
                           <QrCode size={16} className="mr-1.5" />
                           Tiket
                         </Button>
                       )}
+                      {/* Sertifikat diterbitkan panitia dan diunduh dari menu Sertifikat Saya. */}
                       {isEligibleForCertificate(rsvp, event) && (
-                        <Button
-                          variant="success"
-                          size="sm"
-                          onClick={async () => {
-                            // jsPDF hanya diunduh saat sertifikat benar-benar diminta
-                            const { downloadCertificate } = await import('../lib/certificate-pdf');
-                            downloadCertificate(rsvp, event);
-                          }}
-                          title="Unduh Sertifikat Kehadiran"
-                          aria-label="Unduh sertifikat kehadiran"
-                        >
-                          <Award size={16} />
-                        </Button>
+                        <Link to="/sertifikat-saya" title="Sertifikat Saya" aria-label="Buka sertifikat di menu Sertifikat Saya">
+                          <Button variant="success" size="sm" tabIndex={-1}>
+                            <Award size={16} />
+                          </Button>
+                        </Link>
                       )}
                       <Link to={`/event/${event.id}`} aria-label="Lihat detail event">
                         <Button variant="outline" size="sm" className="px-2" tabIndex={-1}>
@@ -302,6 +301,19 @@ export function MyRSVPs() {
           rsvp={ticketModalRsvp}
           holderName={profile?.name}
           onClose={() => setTicketModalRsvp(null)}
+        />
+      )}
+
+      {konfirmasiBatal?.event && (
+        <KonfirmasiBatalDaftar
+          judulEvent={konfirmasiBatal.event.title}
+          daftarTunggu={konfirmasiBatal.status === 'waitlist'}
+          memproses={cancelingId === konfirmasiBatal.eventId}
+          onBatal={() => setKonfirmasiBatal(null)}
+          onYakin={async () => {
+            await handleCancelRSVP(konfirmasiBatal.eventId);
+            setKonfirmasiBatal(null);
+          }}
         />
       )}
     </div>

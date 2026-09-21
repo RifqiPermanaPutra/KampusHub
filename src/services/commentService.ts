@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { namaKanal } from '../lib/kanal';
 import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
 import { CommentRow, rowToComment } from '../lib/mappers';
 import { Comment } from '../types';
@@ -49,7 +50,7 @@ export const commentService = {
     void this.getComments(eventId).then(callback);
 
     const channel = supabase
-      .channel(`comments-${eventId}`)
+      .channel(namaKanal(`comments-${eventId}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: TABLE, filter: `event_id=eq.${eventId}` },

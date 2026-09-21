@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { namaKanal } from '../lib/kanal';
 import { logDbError, OperationType } from '../lib/error-handler';
 import { NotificationRow, rowToNotification } from '../lib/mappers';
 import { Notification } from '../types';
@@ -88,7 +89,7 @@ export const notificationService = {
     void this.getNotifications(userId).then(callback);
 
     const channel = supabase
-      .channel(`notifications-${userId}`)
+      .channel(namaKanal(`notifications-${userId}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: TABLE, filter: `user_id=eq.${userId}` },

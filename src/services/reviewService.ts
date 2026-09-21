@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { namaKanal } from '../lib/kanal';
 import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
 import { ReviewRow, rowToReview } from '../lib/mappers';
 import { Review } from '../types';
@@ -88,7 +89,7 @@ export const reviewService = {
     void this.getReviews(eventId).then(callback);
 
     const channel = supabase
-      .channel(`reviews-${eventId}`)
+      .channel(namaKanal(`reviews-${eventId}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: TABLE, filter: `event_id=eq.${eventId}` },

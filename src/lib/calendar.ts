@@ -4,7 +4,7 @@
  */
 
 import { Event } from '../types';
-import { EVENT_DURATION_MS } from './event-phase';
+import { rentangEvent } from './event-phase';
 
 /** Format waktu UTC untuk iCalendar: 20260918T130000Z */
 export function toIcsDate(date: Date): string {
@@ -25,12 +25,11 @@ export function escapeIcsText(text: string): string {
 }
 
 /**
- * Susun berkas .ics untuk satu event. Durasi memakai asumsi yang sama dengan
- * penanda fase (EVENT_DURATION_MS), karena event hanya menyimpan waktu mulai.
+ * Susun berkas .ics untuk satu event. Waktu selesai memakai rentang yang sama
+ * dengan penanda fase, jadi kalender dan label "Berlangsung" tidak berselisih.
  */
 export function buildEventIcs(event: Event, now: Date = new Date()): string {
-  const start = new Date(event.date);
-  const end = new Date(start.getTime() + EVENT_DURATION_MS);
+  const { start, end } = rentangEvent(event);
   const keterangan = `${event.description}\n\nDiselenggarakan oleh ${event.organizerName}. Kategori: ${event.category}.`;
 
   const lines = [
@@ -42,8 +41,8 @@ export function buildEventIcs(event: Event, now: Date = new Date()): string {
     'BEGIN:VEVENT',
     `UID:${event.id}@kampushub`,
     `DTSTAMP:${toIcsDate(now)}`,
-    `DTSTART:${toIcsDate(start)}`,
-    `DTEND:${toIcsDate(end)}`,
+    `DTSTART:${toIcsDate(new Date(start))}`,
+    `DTEND:${toIcsDate(new Date(end))}`,
     `SUMMARY:${escapeIcsText(event.title)}`,
     `DESCRIPTION:${escapeIcsText(keterangan)}`,
     `LOCATION:${escapeIcsText(event.location)}`,

@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { jalurPoster, validasiPoster } from '../lib/poster';
+import { jalurPoster, validasiDimensiPoster, validasiPoster } from '../lib/poster';
 
 const BUCKET = 'posters';
 
@@ -26,16 +26,40 @@ function pesanUnggah(error: { message?: string }): string {
   return 'Gagal mengunggah poster. Coba lagi.';
 }
 
+export interface PosterTerunggah {
+  url: string;
+  lebar: number;
+  tinggi: number;
+}
+
+/** Ukuran asli gambar, dibaca di browser sebelum berkasnya dikirim. */
+async function bacaDimensi(file: File): Promise<{ lebar: number; tinggi: number }> {
+  try {
+    const gambar = await createImageBitmap(file);
+    const ukuran = { lebar: gambar.width, tinggi: gambar.height };
+    gambar.close();
+    return ukuran;
+  } catch {
+    throw new Error('Gambar tidak bisa dibaca. Coba simpan ulang sebagai JPG atau PNG.');
+  }
+}
+
 /**
  * Poster disimpan di Supabase Storage, dan baris event hanya menyimpan
  * alamatnya. Sebelumnya gambar disimpan sebagai teks base64 di dalam baris
  * event, sehingga setiap daftar event ikut mengunduh semua posternya.
  */
 export const posterService = {
-  /** Mengunggah poster dan mengembalikan alamat publiknya. */
-  async upload(userId: string, file: File): Promise<string> {
+  /** Mengunggah poster dan mengembalikan alamat publik beserta ukurannya. */
+  async upload(userId: string, file: File): Promise<PosterTerunggah> {
     const galat = validasiPoster(file);
     if (galat) throw new Error(galat);
+
+    // Diperiksa sebelum diunggah, supaya gambar yang tidak layak tidak sempat
+    // memenuhi Storage.
+    const { lebar, tinggi } = await bacaDimensi(file);
+    const galatDimensi = validasiDimensiPoster(lebar, tinggi);
+    if (galatDimensi) throw new Error(galatDimensi);
 
     const jalur = jalurPoster(userId, file.type, crypto.randomUUID());
     const { error } = await supabase.storage.from(BUCKET).upload(jalur, file, {
@@ -46,6 +70,6 @@ export const posterService = {
     });
     if (error) throw new Error(pesanUnggah(error));
 
-    return supabase.storage.from(BUCKET).getPublicUrl(jalur).data.publicUrl;
+    return { url: supabase.storage.from(BUCKET).getPublicUrl(jalur).data.publicUrl, lebar, tinggi };
   },
 };

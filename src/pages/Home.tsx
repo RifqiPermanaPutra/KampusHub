@@ -69,7 +69,7 @@ export function Home() {
 
   // Event yang sedang berlangsung, ditonjolkan di bagian paling atas.
   const liveEvents = useMemo(
-    () => filteredEvents.filter(e => getEventPhase(e.date) === 'live'),
+    () => filteredEvents.filter(e => getEventPhase(e) === 'live'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filteredEvents, tick]
   );
@@ -80,9 +80,9 @@ export function Home() {
    * lalu event yang sudah selesai ditaruh paling bawah (terbaru dulu).
    */
   const agendaEvents = useMemo(() => {
-    const isPast = (e: Event) => getEventPhase(e.date) === 'past';
+    const isPast = (e: Event) => getEventPhase(e) === 'past';
     return filteredEvents
-      .filter(e => getEventPhase(e.date) !== 'live')
+      .filter(e => getEventPhase(e) !== 'live')
       .sort((a, b) => {
         const pastA = isPast(a);
         const pastB = isPast(b);
@@ -97,7 +97,7 @@ export function Home() {
   // Slider unggulan hanya untuk event yang masih relevan. Kalau semuanya sudah
   // lewat, slider menampilkan empty state, bukan mempromosikan event kedaluwarsa.
   const featuredEvents = useMemo(
-    () => filteredEvents.filter(e => getEventPhase(e.date) !== 'past'),
+    () => filteredEvents.filter(e => getEventPhase(e) !== 'past'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filteredEvents, tick]
   );

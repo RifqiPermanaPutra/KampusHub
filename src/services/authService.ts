@@ -5,6 +5,7 @@
 
 import { supabase } from '../lib/supabase';
 import { googleBolehDicoba } from '../lib/pengaturan-auth';
+import { MIN_PANJANG_SANDI } from '../lib/sandi';
 
 /** Pesan galat auth Supabase diterjemahkan ke kalimat yang berguna bagi pengguna. */
 export function pesanAuthError(error: unknown): string {
@@ -17,11 +18,16 @@ export function pesanAuthError(error: unknown): string {
   if (p.includes('email not confirmed')) {
     return 'Email belum dikonfirmasi. Cek kotak masuk Anda untuk tautan konfirmasi.';
   }
+  // Tidak menegaskan bahwa email itu punya akun, supaya formulir daftar tidak
+  // bisa dipakai menebak email siapa saja yang terdaftar.
   if (p.includes('user already registered') || p.includes('already been registered')) {
-    return 'Email ini sudah terdaftar. Silakan masuk saja.';
+    return 'Pendaftaran dengan email ini tidak bisa diproses. Kalau Anda sudah punya akun, silakan masuk atau gunakan Lupa kata sandi.';
   }
   if (p.includes('password should be at least')) {
-    return 'Kata sandi minimal 6 karakter.';
+    return `Kata sandi minimal ${MIN_PANJANG_SANDI} karakter.`;
+  }
+  if (p.includes('weak password') || p.includes('weak_password') || p.includes('pwned')) {
+    return 'Kata sandi terlalu lemah atau pernah bocor di internet. Pakai kombinasi lain.';
   }
   if (p.includes('rate limit') || p.includes('too many requests')) {
     return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.';
