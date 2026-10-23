@@ -30,7 +30,7 @@ export function Guard({ children, allowedRoles }: GuardProps) {
 
   if (keputusan.kind === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-dvh">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-ink border-t-transparent" />
       </div>
     );
@@ -38,7 +38,7 @@ export function Guard({ children, allowedRoles }: GuardProps) {
 
   if (keputusan.kind === 'profile-error') {
     return (
-      <div className="flex items-center justify-center min-h-screen paper-grid p-4">
+      <div className="flex items-center justify-center min-h-dvh paper-grid p-4">
         <div className="mading-card max-w-md w-full p-8 text-center space-y-4">
           <h2 className="editorial-title text-2xl text-ink">Gagal memuat profil</h2>
           <p className="text-ink/70">

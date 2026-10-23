@@ -22,10 +22,13 @@ import { buildEventAnalytics, EventAnalytics as Analytics } from '../lib/analyti
 import { Event, Review } from '../types';
 import { SimpleBarChart, TimelineChart } from '../components/charts/SimpleBarChart';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useKembali } from '../lib/useKembali';
 
 export function EventAnalytics() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Kembali ke halaman sebelumnya; kalau dibuka langsung dari tautan, ke detail event.
+  const kembali = useKembali(id ? `/event/${id}` : '/dashboard');
   const { profile } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -78,15 +81,16 @@ export function EventAnalytics() {
     : null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div className="flex flex-wrap items-center gap-4 border-b-2 border-ink pb-6">
-        <BackButton onClick={() => navigate(-1)} />
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
+      <div className="flex flex-wrap items-center gap-3 border-b-2 border-ink pb-5 sm:gap-4 sm:pb-6">
+        <BackButton onClick={kembali} />
         <div className="min-w-0 flex-1">
           <p className="eyebrow mb-1 truncate">{event.title}</p>
-          <h2 className="editorial-title text-4xl text-ink">Analitik Event</h2>
+          <h2 className="editorial-title text-3xl text-ink sm:text-4xl">Analitik Event</h2>
         </div>
         <Button
           variant="stabilo"
+          className="w-full sm:w-auto"
           loading={membuatLaporan}
           onClick={async () => {
             setMembuatLaporan(true);
@@ -104,7 +108,7 @@ export function EventAnalytics() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         <StatCard icon={<Users size={20} />} label="Terdaftar" value={analytics.registered} accent="bg-white" />
         <StatCard icon={<UserCheck size={20} />} label="Check-in" value={analytics.checkedIn} accent="bg-daun" />
         <StatCard icon={<Percent size={20} />} label="Tingkat Kehadiran" value={analytics.attendanceRate} suffix="%" accent="bg-stabilo" />
@@ -112,18 +116,18 @@ export function EventAnalytics() {
       </div>
 
       {pendapatan && (
-        <section className="mading-card p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4">
+        <section className="mading-card p-4 sm:p-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="font-editorial font-extrabold text-xl text-ink">Pendapatan tiket</h3>
             <p className="text-sm text-ink/70">Dari {pendapatan.lunas} pembayaran lunas lewat Midtrans.</p>
           </div>
-          <p className="font-editorial text-4xl font-extrabold text-ink tabular-nums">
+          <p className="font-editorial text-3xl font-extrabold text-ink tabular-nums sm:text-4xl">
             {formatRupiah(pendapatan.total)}
           </p>
         </section>
       )}
 
-      <section className="mading-card p-6 sm:p-8 space-y-5">
+      <section className="mading-card p-4 sm:p-8 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-editorial font-extrabold text-xl text-ink flex items-center gap-2">
             <Star size={18} />
@@ -150,18 +154,18 @@ export function EventAnalytics() {
         )}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="mading-card p-6 sm:p-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <section className="mading-card p-4 sm:p-8">
           <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Peserta per Fakultas</h3>
           <SimpleBarChart data={analytics.byFakultas} />
         </section>
-        <section className="mading-card p-6 sm:p-8">
+        <section className="mading-card p-4 sm:p-8">
           <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Peserta per Angkatan</h3>
           <SimpleBarChart data={analytics.byAngkatan} color="bg-stiker" />
         </section>
       </div>
 
-      <section className="mading-card p-6 sm:p-8">
+      <section className="mading-card p-4 sm:p-8">
         <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Peserta per Program Studi</h3>
         {analytics.byJurusan.some(j => j.label !== 'Tidak diketahui') ? (
           <SimpleBarChart data={analytics.byJurusan} color="bg-daun" />
@@ -174,7 +178,7 @@ export function EventAnalytics() {
       </section>
 
       {analytics.pesertaUmum > 0 && (
-        <section className="mading-card p-6 sm:p-8">
+        <section className="mading-card p-4 sm:p-8">
           <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Asal Peserta</h3>
           <SimpleBarChart data={analytics.byAsal} color="bg-pulpen" />
           <p className="text-sm text-ink/70 mt-4">
@@ -183,7 +187,7 @@ export function EventAnalytics() {
         </section>
       )}
 
-      <section className="mading-card p-6 sm:p-8">
+      <section className="mading-card p-4 sm:p-8">
         <h3 className="font-editorial font-extrabold text-xl text-ink mb-6">Timeline Pendaftaran</h3>
         <TimelineChart data={analytics.timeline} />
       </section>

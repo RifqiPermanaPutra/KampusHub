@@ -7,7 +7,20 @@ import { supabase } from '../lib/supabase';
 import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
 import { RsvpRow, rowToRsvp } from '../lib/mappers';
 import { HasilVerifikasi, bacaHasilVerifikasi } from '../lib/certificate';
-import { RSVP, RSVPStatus } from '../types';
+import { HasilCheckIn, RSVP, RSVPStatus } from '../types';
+
+/**
+ * Hasil check_in_rsvp dan check_in_manual: `{hasil, peserta}`. Sebelum
+ * 14_tiket_dan_check_in.sql dijalankan, check_in_rsvp versi lama mengembalikan
+ * baris pendaftaran saja, dan itu dianggap check-in baru.
+ */
+function bacaHasilCheckIn(data: unknown): HasilCheckIn {
+  const d = data as { hasil?: string; peserta?: RsvpRow } | RsvpRow;
+  if (d && typeof d === 'object' && 'peserta' in d && d.peserta) {
+    return { ulang: d.hasil === 'ulang', peserta: rowToRsvp(d.peserta) };
+  }
+  return { ulang: false, peserta: rowToRsvp(d as RsvpRow) };
+}
 
 const TABLE = 'rsvps';
 
@@ -122,22 +135,38 @@ export const rsvpService = {
   },
 
   /**
-   * Check-in tiket. `ticket` adalah isi QR: `{eventId}_{userId}`.
-   * Satu UPDATE atomik di server; tidak ada lagi kemungkinan status berbeda
-   * antara dua salinan data seperti pada versi Firestore.
+   * Check-in dengan kode tiket, dari QR (`cara` 'qr') atau diketik panitia
+   * ('kode'). Database yang memeriksa kewenangan, jendela waktu, dan kecocokan
+   * event, lalu melaporkan apakah peserta sudah tercatat hadir sebelumnya.
    *
-   * Mengembalikan baris RSVP peserta supaya scanner bisa menyebut namanya.
-   * Panitia yang memindai perlu tahu siapa yang barusan masuk, bukan potongan
-   * kode tiketnya.
+   * Data peserta ikut dikembalikan supaya pemindai bisa menyebut nama dan
+   * asalnya untuk dicocokkan dengan kartu mahasiswa.
    */
-  async checkInRSVP(eventId: string, ticket: string): Promise<RSVP> {
+  async checkInRSVP(eventId: string, kode: string, cara: 'qr' | 'kode' = 'qr'): Promise<HasilCheckIn> {
     try {
+      // p_cara hanya dikirim untuk kode yang diketik, supaya pindai QR tetap
+      // bisa memanggil fungsi versi lama sebelum migrasi 14 dijalankan.
       const { data, error } = await supabase.rpc('check_in_rsvp', {
         p_event_id: eventId,
-        p_ticket: ticket,
+        p_ticket: kode,
+        ...(cara === 'kode' ? { p_cara: 'kode' } : {}),
       });
       if (error) throw error;
-      return rowToRsvp(data as RsvpRow);
+      return bacaHasilCheckIn(data);
+    } catch (error) {
+      throwDbError(error, OperationType.UPDATE, TABLE);
+    }
+  },
+
+  /** Check-in dari daftar peserta, untuk QR yang tidak bisa dipakai atau lupa dipindai. */
+  async checkInManual(eventId: string, userId: string): Promise<HasilCheckIn> {
+    try {
+      const { data, error } = await supabase.rpc('check_in_manual', {
+        p_event_id: eventId,
+        p_user_id: userId,
+      });
+      if (error) throw error;
+      return bacaHasilCheckIn(data);
     } catch (error) {
       throwDbError(error, OperationType.UPDATE, TABLE);
     }

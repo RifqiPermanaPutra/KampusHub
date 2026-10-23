@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Event } from '../types';
+import { Event, RSVP } from '../types';
 import { getEventPhase } from './event-phase';
 
 export type RegistrationState = 'open' | 'closed-deadline' | 'closed-finished';
@@ -34,6 +34,21 @@ export function registrationButtonLabel(state: RegistrationState): string {
     case 'closed-deadline': return 'Pendaftaran Ditutup';
     default: return 'RSVP Sekarang →';
   }
+}
+
+/**
+ * Apakah peserta masih boleh membatalkan pendaftarannya sendiri. Aturan yang
+ * sama ditegakkan fungsi cancel_rsvp (14_tiket_dan_check_in.sql): event
+ * berbayar, peserta yang sudah check-in, dan event yang sudah selesai ditolak.
+ */
+export function bolehBatalkan(
+  rsvp: Pick<RSVP, 'status'>,
+  event: Pick<Event, 'date' | 'endDate' | 'harga'>,
+  now: number = Date.now(),
+): boolean {
+  if ((event.harga ?? 0) > 0) return false;
+  if (rsvp.status === 'checked-in') return false;
+  return getEventPhase(event, now) !== 'past';
 }
 
 /** Keterangan batas waktu untuk ditampilkan di detail event. */

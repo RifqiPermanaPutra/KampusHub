@@ -33,10 +33,12 @@ export function Button({
     ghost: 'border-2 border-transparent text-ink/70 hover:text-ink hover:bg-ink/5',
   };
 
+  // Ukuran kecil tetap setinggi 40px di layar sentuh supaya mudah diketuk
+  // jempol, lalu kembali ringkas di layar besar yang dipakai dengan tetikus.
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-5 py-2.5 text-sm',
-    lg: 'px-8 py-4 text-base',
+    sm: 'min-h-10 px-3 py-1.5 text-xs sm:min-h-0',
+    md: 'min-h-11 px-5 py-2.5 text-sm',
+    lg: 'min-h-12 px-8 py-4 text-base',
   };
 
   return (

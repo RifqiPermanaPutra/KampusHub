@@ -42,7 +42,9 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 2. Buka **SQL Editor**, lalu jalankan berkas di `supabase/migrations/` **berurutan**:
    `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql` → `07_prodi.sql` → `08_akses_dan_waktu_selesai.sql` →
    `09_peserta_umum.sql` → `10_kapasitas_daftar_tunggu.sql` → `11_pembayaran.sql` →
-   `12_batas_permintaan.sql` → `13_sertifikat.sql`.
+   `12_batas_permintaan.sql` → `13_sertifikat.sql` → `14_tiket_dan_check_in.sql`.
+   Setelah itu, jalankan `supabase/tests/uji_akses.sql` untuk memastikan hak akses sudah
+   benar. Hasil yang diharapkan: "Success. No rows returned".
 3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.
 4. Untuk login Google: daftarkan OAuth client di Google Cloud Console, lalu isi
    Client ID dan Secret di **Authentication → Providers → Google**.
@@ -93,6 +95,24 @@ dasbor Supabase:
 Aksi yang melewati database (mendaftar event, tanya jawab, pembayaran, pengajuan panitia,
 sertifikat, verifikasi) dibatasi `12_batas_permintaan.sql`.
 
+## E-tiket dan Check-in
+
+Setiap pendaftaran mendapat kode tiket acak seperti `KH-7F3K-9Q2M`. Kode ini yang ada di QR,
+dan panitia bisa mengetiknya kalau kamera gagal membaca. Peserta bisa menyimpan e-tiket
+sebagai gambar dari menu **Pendaftaran Saya**, supaya tetap bisa ditunjukkan saat sinyal buruk.
+
+Panitia membuka detail event → **Scanner Tiket & Check-in**. Aturannya:
+
+1. Check-in dibuka **2 jam sebelum** acara dimulai.
+2. Pindai QR dan ketik kode ditutup **1 jam setelah** acara selesai. Sesudah itu panitia masih
+   bisa mencatat kehadiran lewat tombol check-in manual di daftar peserta.
+3. Tiket yang dipindai dua kali tidak dihitung ulang. Layar pemindai menyebut jam dan cara
+   check-in pertamanya, supaya panitia bisa memastikan orangnya sama.
+4. Daftar peserta bisa dicari berdasarkan nama, kode tiket, program studi, atau asal instansi.
+
+QR lama yang berisi `{eventId}_{userId}` tidak diterima lagi setelah migrasi 14; e-tiket di
+aplikasi otomatis menampilkan kode baru.
+
 ## Sertifikat
 
 Panitia membuka detail event → **Sertifikat Peserta**, lalu:
@@ -133,3 +153,12 @@ sebagian hanya diperiksa di browser.
 - **Tambah ke kalender**: unduh berkas `.ics` (dengan alarm H-1 jam) dari halaman
   detail event maupun dari e-tiket.
 - **Bagikan event**: memakai menu bagikan bawaan perangkat, dengan cadangan salin tautan.
+- **Arsip otomatis**: 3 hari setelah selesai, event hilang dari Beranda, Jelajah, dan Disimpan.
+  Datanya tetap di database: panitia masih bisa menerbitkan sertifikat dari dasbor, peserta
+  melihatnya di bagian Riwayat menu Tiket, dan tautan verifikasi sertifikat tetap berlaku. Event
+  yang sudah selesai dan punya peserta tidak bisa dihapus dari aplikasi, karena penghapusan ikut
+  membuang kehadiran dan sertifikatnya.
+- **Pasang di HP**: dari browser HP pilih "Tambahkan ke Layar Utama" (iPhone: tombol Bagikan di
+  Safari; Android: menu Chrome). Aplikasi terbuka tanpa bilah alamat, dan menekan lama ikonnya di
+  Android memberi pintasan ke Tiket Saya. Perlu HTTPS, jadi uji di hasil deploy, bukan lewat
+  alamat IP laptop.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bolehBatalkan,
   deadlineNote,
   getRegistrationState,
   isRegistrationClosed,
@@ -77,5 +78,28 @@ describe('deadlineNote', () => {
     const event = buatEvent({ rsvpDeadline: new Date(mulai - 24 * jam).toISOString() });
     expect(deadlineNote(event, mulai - 30 * jam)).toContain('Pendaftaran ditutup ');
     expect(deadlineNote(event, mulai - 2 * jam)).toContain('ditutup pada');
+  });
+});
+
+describe('bolehBatalkan', () => {
+  const selesai = new Date(mulai + 3 * jam).toISOString();
+  const gratis = buatEvent({ endDate: selesai });
+
+  it('boleh sebelum dan selama event bagi yang belum hadir', () => {
+    expect(bolehBatalkan({ status: 'registered' }, gratis, mulai - jam)).toBe(true);
+    expect(bolehBatalkan({ status: 'waitlist' }, gratis, mulai + jam)).toBe(true);
+  });
+
+  it('tidak boleh setelah check-in', () => {
+    // Pembatalan menghapus baris pendaftaran, termasuk bukti hadir untuk sertifikat.
+    expect(bolehBatalkan({ status: 'checked-in' }, gratis, mulai + jam)).toBe(false);
+  });
+
+  it('tidak boleh setelah event selesai', () => {
+    expect(bolehBatalkan({ status: 'registered' }, gratis, mulai + 4 * jam)).toBe(false);
+  });
+
+  it('tidak boleh untuk event berbayar', () => {
+    expect(bolehBatalkan({ status: 'registered' }, buatEvent({ endDate: selesai, harga: 25000 }), mulai - jam)).toBe(false);
   });
 });

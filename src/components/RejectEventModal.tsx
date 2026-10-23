@@ -69,7 +69,7 @@ export function RejectEventModal({ judulEvent, onBatal, onKirim }: RejectEventMo
             maxLength={MAX_ALASAN_PENOLAKAN}
             onChange={(e) => setAlasan(e.target.value)}
             placeholder="Contoh: Lokasi belum mencantumkan ruangan, dan jam mulainya bentrok dengan ujian tengah semester."
-            className="w-full min-h-[120px] rounded-lg border-2 border-ink bg-white p-3 text-sm text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none"
+            className="w-full min-h-[120px] rounded-lg border-2 border-ink bg-white p-3 text-base text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none sm:text-sm"
           />
           <p className="stamp text-ink/60 text-right">
             {alasan.trim().length}/{MAX_ALASAN_PENOLAKAN}

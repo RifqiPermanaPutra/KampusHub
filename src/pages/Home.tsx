@@ -7,10 +7,11 @@ import { recommendEvents } from '../lib/recommendation';
 import { Event } from '../types';
 import { FeaturedSlider } from '../components/FeaturedEvent';
 import { InfoBoardCard } from '../components/InfoBoardCard';
-import { EventCard, wallTilt } from '../components/EventCard';
+import { EventCard, GRID_KARTU_EVENT, wallTilt } from '../components/EventCard';
 import { Button } from '../components/ui/Button';
 import { CATEGORIES } from '../constants';
 import { getEventPhase } from '../lib/event-phase';
+import { sudahDiarsipkan } from '../lib/arsip';
 import { buildInfoBoard } from '../lib/info-board';
 import { cn } from '../lib/utils';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -27,7 +28,7 @@ function greeting(hour: number) {
 
 function PosterWall({ events }: { events: Event[] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 pt-2">
+    <div className={cn(GRID_KARTU_EVENT, 'sm:pt-2')}>
       {events.map((event, index) => (
         <EventCard key={event.id} event={event} tilt={wallTilt(index)} index={index} />
       ))}
@@ -47,7 +48,8 @@ export function Home() {
 
   useEffect(() => {
     async function loadEvents() {
-      const data = await eventService.getAllEvents('approved');
+      // Event yang selesai lebih dari tiga hari lalu sudah diarsipkan dan tidak ikut diunduh.
+      const data = await eventService.getAllEvents('approved', { tanpaArsip: true });
       setEvents(data);
       if (profile) {
         const myRsvps = await rsvpService.getRSVPsForUser(profile.uid);
@@ -63,9 +65,16 @@ export function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  // Saring ulang di browser untuk event yang melewati batas arsip selama halaman terbuka.
+  const eventTampil = useMemo(
+    () => events.filter(e => !sudahDiarsipkan(e)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [events, tick]
+  );
+
   const filteredEvents = categoryFilter === ALL
-    ? events
-    : events.filter(e => e.category === categoryFilter);
+    ? eventTampil
+    : eventTampil.filter(e => e.category === categoryFilter);
 
   // Event yang sedang berlangsung, ditonjolkan di bagian paling atas.
   const liveEvents = useMemo(
@@ -107,19 +116,19 @@ export function Home() {
   // Ringkasan isi mading. Dihitung sekali di sini lalu dipakai bersama oleh
   // headline dan kartu Papan Info, supaya keduanya tidak mungkin berbeda angka.
   const info = useMemo(
-    () => buildInfoBoard(events),
+    () => buildInfoBoard(eventTampil),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [events, tick]
+    [eventTampil, tick]
   );
 
   const firstName = profile?.name?.split(' ')[0];
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-12">
+      <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12">
         <div className="space-y-4">
           <div className="h-4 w-40 rounded-md shimmer" />
-          <div className="h-14 w-full max-w-xl rounded-lg shimmer" />
+          <div className="h-10 w-full max-w-xl rounded-lg shimmer sm:h-14" />
         </div>
         <EventGridSkeleton count={6} />
       </div>
@@ -127,26 +136,27 @@ export function Home() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-14">
+    <div className="max-w-6xl mx-auto space-y-10 sm:space-y-14">
       {/* Headline mading */}
-      <section className="space-y-6">
+      <section className="space-y-5 sm:space-y-6">
         <div className="max-w-3xl">
-          <p className="eyebrow mb-3">
+          <p className="eyebrow mb-2 sm:mb-3">
             {greeting(new Date().getHours())}{firstName ? `, ${firstName}` : ''}
           </p>
-          <h2 className="editorial-title text-4xl sm:text-5xl lg:text-6xl leading-[0.95] text-ink">
+          <h2 className="editorial-title text-3xl sm:text-5xl lg:text-6xl leading-[0.95] text-ink">
             {info.mingguIni > 0 ? (
               <>Minggu ini ada <span className="marker marker-draw">{info.mingguIni} event</span> di kampus.</>
             ) : (
               <>Mading minggu ini masih <span className="marker marker-draw">kosong</span>.</>
             )}
           </h2>
-          <p className="mt-4 text-ink/70 max-w-lg">
+          <p className="mt-3 text-ink/70 max-w-lg sm:mt-4">
             Dari seminar sampai futsal. Pilih, daftar, datang, tiketnya langsung ada di HP.
           </p>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto p-1 -m-1 pb-2 scrollbar-none" role="group" aria-label="Filter kategori">
+        {/* Di ponsel chip bisa digeser sampai tepi layar, tidak terpotong padding halaman. */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 scrollbar-none sm:mx-0 sm:-m-1 sm:p-1 sm:pb-2" role="group" aria-label="Filter kategori">
           {[ALL, ...CATEGORIES].map((cat) => {
             const active = categoryFilter === cat;
             return (
@@ -155,7 +165,7 @@ export function Home() {
                 onClick={() => setCategoryFilter(cat)}
                 aria-pressed={active}
                 className={cn(
-                  'whitespace-nowrap rounded-full border-2 border-ink px-3.5 py-1 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                  'min-h-10 shrink-0 whitespace-nowrap rounded-full border-2 border-ink px-4 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-0 sm:px-3.5 sm:py-1',
                   active ? 'bg-ink text-white' : 'bg-white text-ink hover:bg-stabilo'
                 )}
               >
@@ -165,7 +175,7 @@ export function Home() {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-2">
+        <div className="grid grid-cols-1 gap-6 pt-1 sm:gap-8 sm:pt-2 lg:grid-cols-3">
           <FeaturedSlider events={featuredEvents} />
           <InfoBoardCard info={info} />
         </div>
@@ -173,7 +183,7 @@ export function Home() {
 
       {/* Sedang berlangsung */}
       {liveEvents.length > 0 && (
-        <section className="space-y-6">
+        <section className="space-y-4 sm:space-y-6">
           <div className="flex items-center gap-3">
             <span className="live-dot w-3 h-3 rounded-full border-2 border-ink bg-spidol" aria-hidden="true" />
             <h3 className="eyebrow text-ink">Sedang berlangsung sekarang</h3>
@@ -185,7 +195,7 @@ export function Home() {
 
       {/* Rekomendasi */}
       {recommended.length > 0 && (
-        <section className="space-y-6">
+        <section className="space-y-4 sm:space-y-6">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-ink" />
             <h3 className="eyebrow">Rekomendasi untuk Anda</h3>
@@ -195,13 +205,13 @@ export function Home() {
       )}
 
       {/* Agenda */}
-      <section className="space-y-6">
-        <h3 className="eyebrow">{hasUpcoming ? 'Agenda terdekat' : 'Arsip event'}</h3>
+      <section className="space-y-4 sm:space-y-6">
+        <h3 className="eyebrow">{hasUpcoming ? 'Agenda terdekat' : 'Baru selesai'}</h3>
 
         {agendaEvents.length > 0 ? (
           <PosterWall events={agendaEvents} />
         ) : (
-          <div className="mading-card p-12 text-center space-y-4 max-w-xl mx-auto">
+          <div className="mading-card p-6 text-center space-y-4 max-w-xl mx-auto sm:p-12">
             <p className="editorial-title text-2xl text-ink">Belum ada event {categoryFilter} di mading.</p>
             <p className="text-ink/70">Coba kategori lain, atau lihat semua event yang sedang dibuka.</p>
             <Button variant="stabilo" onClick={() => setCategoryFilter(ALL)}>

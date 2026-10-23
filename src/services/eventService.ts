@@ -6,6 +6,7 @@
 import { supabase } from '../lib/supabase';
 import { logDbError, throwDbError, OperationType } from '../lib/error-handler';
 import { EventRow, eventToRow, rowToEvent } from '../lib/mappers';
+import { batasSelesaiBelumArsip } from '../lib/arsip';
 import { Event, EventStatus } from '../types';
 
 /*
@@ -17,10 +18,16 @@ const VIEW = 'events_with_counts';
 const TABLE = 'events';
 
 export const eventService = {
-  async getAllEvents(status?: EventStatus): Promise<Event[]> {
+  /**
+   * `tanpaArsip`: event yang selesai lebih dari tiga hari lalu tidak ikut
+   * diunduh (lihat lib/arsip.ts). Dipakai Beranda dan Jelajah; dasbor admin
+   * tetap membaca semuanya.
+   */
+  async getAllEvents(status?: EventStatus, opsi: { tanpaArsip?: boolean } = {}): Promise<Event[]> {
     try {
       let q = supabase.from(VIEW).select('*').order('date', { ascending: true });
       if (status) q = q.eq('status', status);
+      if (opsi.tanpaArsip) q = q.gt('end_date', batasSelesaiBelumArsip());
 
       const { data, error } = await q;
       if (error) throw error;

@@ -60,9 +60,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
+      {/*
+        * Di ponsel toast muncul di atas navigasi bawah, bukan tertutup olehnya.
+        * Di layar besar navigasi bawah tidak ada, jadi turun ke pojok kanan bawah.
+        */}
       <div
         aria-live="polite"
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 z-[100] space-y-3 w-[calc(100%-2rem)] max-w-sm"
+        className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 lg:bottom-6 z-[100] space-y-3 w-[calc(100%-2rem)] max-w-sm"
       >
         {toasts.map(toast => (
           <div
@@ -79,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => dismiss(toast.id)}
               aria-label="Tutup notifikasi"
-              className="text-ink/60 hover:text-ink p-1 rounded-md"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-ink/60 hover:text-ink"
             >
               <X size={14} />
             </button>

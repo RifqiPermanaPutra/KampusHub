@@ -10,10 +10,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { savedService } from '../services/savedService';
 import { eventService } from '../services/eventService';
 import { Event } from '../types';
-import { EventCard, wallTilt } from '../components/EventCard';
+import { EventCard, GRID_KARTU_EVENT, wallTilt } from '../components/EventCard';
 import { Button } from '../components/ui/Button';
 import { EventGridSkeleton } from '../components/ui/Skeleton';
 import { getEventPhase } from '../lib/event-phase';
+import { ARSIP_SETELAH_SELESAI_HARI, sudahDiarsipkan } from '../lib/arsip';
 import { usePageTitle } from '../lib/usePageTitle';
 
 /** Event yang belum lewat tampil dulu, yang sudah selesai di bawah. */
@@ -40,8 +41,8 @@ export function SavedEvents() {
       const ids = await savedService.getSavedIds(profile!.uid);
       const hasil = await Promise.all(ids.map(id => eventService.getEventById(id)));
       if (batal) return;
-      // Event yang sudah dihapus panitia otomatis hilang dari daftar.
-      setEvents(urutkan(hasil.filter((e): e is Event => e !== null)));
+      // Event yang sudah dihapus panitia atau sudah diarsipkan otomatis hilang dari daftar.
+      setEvents(urutkan(hasil.filter((e): e is Event => e !== null && !sudahDiarsipkan(e))));
       setLoading(false);
     }
 
@@ -52,16 +53,19 @@ export function SavedEvents() {
   const heading = (
     <div>
       <p className="eyebrow mb-2">Ditandai untuk nanti</p>
-      <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
+      <h2 className="editorial-title text-3xl sm:text-5xl text-ink mb-2">
         Event <span className="marker marker-draw">Disimpan</span>
       </h2>
-      <p className="text-ink/70">Kamu tetap dapat pengingat H-1 untuk event di sini, walau belum mendaftar.</p>
+      <p className="text-ink/70">
+        Kamu tetap dapat pengingat H-1 untuk event di sini, walau belum mendaftar. Event yang sudah selesai
+        lebih dari {ARSIP_SETELAH_SELESAI_HARI} hari hilang sendiri dari daftar ini.
+      </p>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-10">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
         {heading}
         <EventGridSkeleton count={3} />
       </div>
@@ -69,17 +73,17 @@ export function SavedEvents() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
       {heading}
 
       {events.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 pt-2">
+        <div className={`${GRID_KARTU_EVENT} sm:pt-2`}>
           {events.map((event, index) => (
             <EventCard key={event.id} event={event} tilt={wallTilt(index)} index={index} />
           ))}
         </div>
       ) : (
-        <div className="mading-card p-12 text-center max-w-xl mx-auto space-y-4">
+        <div className="mading-card p-6 text-center max-w-xl mx-auto space-y-4 sm:p-12">
           <div className="w-14 h-14 rounded-lg border-2 border-ink bg-stabilo flex items-center justify-center mx-auto -rotate-6 shadow-sticker">
             <Bookmark size={24} className="text-ink" />
           </div>

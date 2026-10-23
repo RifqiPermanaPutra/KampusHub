@@ -17,14 +17,15 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen paper-grid flex items-center justify-center px-4 py-12">
+    // min-h-dvh: tinggi layar yang benar-benar terlihat di ponsel, tanpa bilah alamat.
+    <div className="min-h-dvh paper-grid flex items-center justify-center px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:py-12">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-10">
+        <div className="flex justify-center mb-6 sm:mb-10">
           <Logo className="text-3xl" />
         </div>
-        <div className="tape mading-card shadow-sticker-lg p-7 sm:p-10 space-y-8">
+        <div className="tape mading-card shadow-sticker-lg p-5 pt-8 space-y-6 sm:p-10 sm:space-y-8">
           <div className="text-center">
-            <h2 className="editorial-title text-4xl text-ink leading-tight">{title}</h2>
+            <h2 className="editorial-title text-3xl text-ink leading-tight sm:text-4xl">{title}</h2>
             <p className="text-ink/70 mt-2 text-sm">{subtitle}</p>
           </div>
           {children}

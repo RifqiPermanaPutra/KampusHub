@@ -1,0 +1,32 @@
+{
+  "name": "KampusHub - Event Kampus",
+  "short_name": "KampusHub",
+  "description": "Cari event kampus, daftar, simpan e-tiket, dan unduh sertifikat.",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF7",
+  "theme_color": "#FAFAF7",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tiket Saya",
+      "short_name": "Tiket",
+      "description": "Buka e-tiket untuk check-in",
+      "url": "/my-rsvps",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Jelajahi Event",
+      "short_name": "Jelajah",
+      "url": "/explore",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

@@ -3,9 +3,33 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    viewport-fit=cover membuat env(safe-area-inset-*) terisi di iPhone, sehingga
+    navigasi bawah dan panel bawah tidak tertutup garis home.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#FAFAF7" />
+  <meta name="format-detection" content="telephone=no" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <!--
+    Bisa dipasang ke layar utama HP (Tambahkan ke Layar Utama) dan terbuka
+    tanpa bilah alamat seperti aplikasi. iOS memakai apple-touch-icon dan
+    meta apple-*, Android memakai manifest.
+  -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="KampusHub" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <!--
+    Font dimuat dari sini, bukan lewat @import di CSS, supaya unduhannya berjalan
+    bersamaan dengan skrip aplikasi. Di jaringan seluler, rantai HTML ke CSS ke
+    CSS font membuat teks lama muncul.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@500;600&family=Onest:wght@400..800&display=swap" />
   <title>KampusHub - Platform Event Kampus</title>
 </head>
 

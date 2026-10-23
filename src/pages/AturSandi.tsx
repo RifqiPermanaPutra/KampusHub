@@ -51,7 +51,7 @@ export function AturSandi() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen paper-grid">
+      <div className="flex items-center justify-center min-h-dvh paper-grid">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-ink border-t-transparent" />
       </div>
     );

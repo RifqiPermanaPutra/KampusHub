@@ -21,10 +21,12 @@ import { Input } from '../components/ui/Input';
 import { EventCard } from '../components/EventCard';
 import { CATEGORIES } from '../constants';
 import { Event, EventStatus } from '../types';
+import { cn } from '../lib/utils';
 
 const fieldLabel = 'block text-xs font-bold text-ink uppercase tracking-wider';
+// text-base di ponsel: Safari memperbesar layar kalau huruf kolom di bawah 16px.
 const fieldBox =
-  'w-full rounded-lg bg-white border-2 border-ink px-4 text-sm text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none';
+  'w-full min-h-11 rounded-lg bg-white border-2 border-ink px-4 text-base text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none sm:text-sm';
 
 export function CreateEvent() {
   const { profile } = useAuth();
@@ -244,9 +246,9 @@ export function CreateEvent() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="mb-10">
+      <div className="mb-6 sm:mb-10">
         <p className="eyebrow mb-2">{isEditing ? 'Ubah poster' : 'Tempel poster baru'}</p>
-        <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
+        <h2 className="editorial-title text-3xl sm:text-5xl text-ink mb-2">
           {isEditing ? 'Edit Event' : <>Buat event <span className="marker">baru</span></>}
         </h2>
         <p className="text-ink/70">
@@ -262,8 +264,8 @@ export function CreateEvent() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-10 items-start">
-        <form onSubmit={handleSubmit} className="mading-card p-6 sm:p-10 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-8 lg:gap-10 items-start">
+        <form onSubmit={handleSubmit} className="mading-card p-4 sm:p-10 space-y-8">
           <div className="space-y-6">
             <Input
               label="Judul Event"
@@ -271,7 +273,7 @@ export function CreateEvent() {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
-              className="text-lg font-bold"
+              className="text-lg font-bold sm:text-lg"
             />
 
             <div className="space-y-1.5">
@@ -295,7 +297,7 @@ export function CreateEvent() {
                 id="event-description"
                 required
                 placeholder="Beri tahu mahasiswa tentang apa event ini..."
-                className={`${fieldBox} min-h-[150px] py-3`}
+                className={cn(fieldBox, 'min-h-[150px] py-3')}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
@@ -305,7 +307,7 @@ export function CreateEvent() {
               <label htmlFor="event-category" className={fieldLabel}>Kategori</label>
               <select
                 id="event-category"
-                className={`${fieldBox} py-2.5`}
+                className={cn(fieldBox, 'py-2.5')}
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
@@ -347,6 +349,7 @@ export function CreateEvent() {
               <Input
                 label="Kapasitas Peserta (Opsional)"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 placeholder="Kosongkan jika tanpa batas"
                 value={formData.capacity}
@@ -449,7 +452,8 @@ export function CreateEvent() {
 
           {error && <p className="mading-alert text-center" role="alert">{error}</p>}
 
-          <div className="flex gap-4 pt-2">
+          {/* Ponsel: tombol utama di atas dan selebar layar, Batal di bawahnya. */}
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:gap-4">
             <Button
               type="button"
               variant="outline"
@@ -470,7 +474,8 @@ export function CreateEvent() {
         </form>
 
         {/* Pratinjau poster: tampilan kartu di mading setelah disetujui */}
-        <aside className="lg:sticky lg:top-2 space-y-4">
+        {/* top-24: di bawah header yang ikut menempel di atas layar. */}
+        <aside className="lg:sticky lg:top-24 space-y-4">
           <p className="eyebrow">Pratinjau di mading</p>
           <div inert className="pointer-events-none select-none">
             <EventCard event={previewEvent} tilt={-1.5} />

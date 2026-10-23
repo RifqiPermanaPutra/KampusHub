@@ -21,8 +21,9 @@ import { keBlob, sertifikatService } from '../../services/sertifikatService';
 import { cn } from '../../lib/utils';
 
 const labelKelas = 'block text-xs font-bold text-ink uppercase tracking-wider';
+// text-base di ponsel: Safari memperbesar layar kalau huruf pilihan di bawah 16px.
 const pilihanKelas =
-  'w-full rounded-lg bg-white border-2 border-ink px-4 py-2.5 text-sm text-ink outline-none focus:shadow-sticker';
+  'w-full min-h-11 rounded-lg bg-white border-2 border-ink px-4 py-2.5 text-base text-ink outline-none focus:shadow-sticker sm:text-sm';
 
 /** tempat: di bawah tombol template, atau di atas tombol Simpan, supaya pesan muncul dekat tombol yang ditekan. */
 type Pesan = { tempat: 'template' | 'simpan'; jenis: 'galat' | 'info'; teks: string } | null;
@@ -289,7 +290,7 @@ export function PengaturanTemplate({
                   onClick={() => ubah({ perataan: p.nilai })}
                   aria-pressed={isian.perataan === p.nilai}
                   className={cn(
-                    'rounded-lg border-2 border-ink px-2 py-2 text-sm font-bold',
+                    'min-h-11 rounded-lg border-2 border-ink px-2 py-2 text-sm font-bold',
                     isian.perataan === p.nilai ? 'bg-stabilo' : 'bg-white hover:bg-stabilo/40',
                   )}
                 >
@@ -305,7 +306,7 @@ export function PengaturanTemplate({
             type="checkbox"
             checked={isian.tampilkanNomor}
             onChange={e => ubah({ tampilkanNomor: e.target.checked })}
-            className="mt-0.5 h-4 w-4 accent-ink"
+            className="mt-0.5 h-5 w-5 shrink-0 accent-ink sm:h-4 sm:w-4"
           />
           <span>
             Cetak nomor sertifikat dan tautan cek keaslian kecil di bawah halaman. Matikan kalau
@@ -315,7 +316,7 @@ export function PengaturanTemplate({
 
         {pesan?.tempat === 'simpan' && <KotakPesan pesan={pesan} />}
 
-        <Button onClick={simpan} loading={sibuk === 'simpan'} disabled={sibuk === 'unggah'}>
+        <Button onClick={simpan} loading={sibuk === 'simpan'} disabled={sibuk === 'unggah'} className="w-full sm:w-auto">
           <Save size={16} className="mr-2" />
           Simpan Pengaturan
         </Button>

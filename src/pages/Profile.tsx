@@ -25,12 +25,12 @@ import { JenisPeserta } from '../types';
 function StatTile({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
   const shown = useCountUp(value);
   return (
-    <div className="rounded-lg border-2 border-ink bg-white p-4">
-      <div className={`w-9 h-9 rounded-lg border-2 border-ink flex items-center justify-center mb-3 text-ink ${accent}`}>
+    <div className="rounded-lg border-2 border-ink bg-white p-3 sm:p-4">
+      <div className={`w-8 h-8 rounded-lg border-2 border-ink flex items-center justify-center mb-2 text-ink sm:w-9 sm:h-9 sm:mb-3 ${accent}`}>
         {icon}
       </div>
-      <p className="font-editorial text-3xl font-extrabold text-ink tabular-nums leading-none">{shown}</p>
-      <p className="eyebrow mt-1.5">{label}</p>
+      <p className="font-editorial text-2xl font-extrabold text-ink tabular-nums leading-none sm:text-3xl">{shown}</p>
+      <p className="eyebrow mt-1.5 text-[10px] tracking-wider sm:text-xs sm:tracking-[0.12em]">{label}</p>
     </div>
   );
 }
@@ -180,7 +180,7 @@ export function Profile() {
     <div className="max-w-4xl mx-auto">
       <div className="mading-card shadow-sticker-lg">
         {/* Banner */}
-        <div className="h-44 bg-pulpen relative rounded-t-[10px] border-b-2 border-ink">
+        <div className="h-32 bg-pulpen relative rounded-t-[10px] border-b-2 border-ink sm:h-44">
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[10px]" aria-hidden="true">
             <span className="absolute -right-16 -top-24 h-72 w-72 rounded-full border-2 border-white/40" />
             <span className="absolute right-40 -bottom-24 h-48 w-48 rounded-full border-2 border-white/25" />
@@ -189,7 +189,7 @@ export function Profile() {
           <Avatar
             nama={profile.name}
             alt={profile.name}
-            className="absolute -bottom-14 left-6 sm:left-10 w-28 h-28 !rounded-xl text-4xl -rotate-3 shadow-sticker motion-reduce:rotate-0"
+            className="absolute -bottom-12 left-5 w-24 h-24 !rounded-xl text-3xl -rotate-3 shadow-sticker motion-reduce:rotate-0 sm:-bottom-14 sm:left-10 sm:w-28 sm:h-28 sm:text-4xl"
           />
 
           <div className="absolute right-4 bottom-4 sm:right-6">
@@ -199,7 +199,8 @@ export function Profile() {
                 Edit Profil
               </Button>
             ) : (
-              <div className="flex gap-2">
+              // Di ponsel tombol simpan ada di bawah formulir, dekat kolom terakhir yang diisi.
+              <div className="hidden gap-2 sm:flex">
                 <Button onClick={handleSave} disabled={saving} loading={saving} size="sm" variant="success">
                   <Check size={16} className="mr-1" />
                   Simpan
@@ -213,7 +214,7 @@ export function Profile() {
           </div>
         </div>
 
-        <div className="pt-20 px-6 sm:px-10 pb-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="pt-16 px-5 pb-8 grid grid-cols-1 gap-8 sm:pt-20 sm:px-10 sm:pb-10 md:grid-cols-3 md:gap-10">
           {/* Info Side */}
           <div className="md:col-span-2 space-y-8 min-w-0">
             {isEditing ? (
@@ -271,22 +272,32 @@ export function Profile() {
                     id="profile-bio"
                     value={bio}
                     onChange={e => setBio(e.target.value)}
-                    className="w-full rounded-lg border-2 border-ink bg-white p-4 text-sm text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none"
+                    className="w-full rounded-lg border-2 border-ink bg-white p-4 text-base text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none sm:text-sm"
                     rows={3}
                     placeholder="Ceritakan tentang dirimu..."
                   />
                 </div>
                 {error && <p className="mading-alert">{error}</p>}
+                <div className="grid grid-cols-2 gap-3 sm:hidden">
+                  <Button onClick={handleCancel} disabled={saving} variant="outline">
+                    <X size={16} className="mr-1" />
+                    Batal
+                  </Button>
+                  <Button onClick={handleSave} disabled={saving} loading={saving} variant="success">
+                    <Check size={16} className="mr-1" />
+                    Simpan
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="editorial-title text-4xl sm:text-5xl text-ink">{profile.name}</h2>
+                  <h2 className="editorial-title text-3xl sm:text-5xl text-ink break-words">{profile.name}</h2>
                   <Badge variant={profile.role === 'admin' ? 'red' : profile.role === 'panitia' ? 'purple' : 'yellow'}>
                     {profile.role === 'mahasiswa' && pesertaUmum ? 'peserta umum' : profile.role}
                   </Badge>
                 </div>
-                <p className="text-lg text-ink/70 font-medium">
+                <p className="text-base text-ink/70 font-medium sm:text-lg">
                   {profile.role === 'mahasiswa'
                     ? pesertaUmum
                       ? [labelJenisPeserta('umum'), profile.asalInstansi].filter(Boolean).join(' • ')
@@ -413,7 +424,7 @@ export function Profile() {
               * benar dan memang perlu diketahui pengguna: data apa yang ikut
               * terkirim ke panitia setiap kali dia mendaftar ke sebuah event.
               */}
-            <div className="tape rounded-xl border-2 border-ink bg-stabilo p-7 flex flex-col items-center justify-center text-center space-y-3 rotate-1 motion-reduce:rotate-0">
+            <div className="tape rounded-xl border-2 border-ink bg-stabilo p-5 flex flex-col items-center justify-center text-center space-y-3 sm:p-7 sm:rotate-1 motion-reduce:rotate-0">
               <div className="w-14 h-14 bg-white rounded-lg border-2 border-ink flex items-center justify-center text-ink">
                 <Shield size={28} />
               </div>

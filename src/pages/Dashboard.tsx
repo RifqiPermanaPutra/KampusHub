@@ -24,6 +24,7 @@ import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { cn } from '../lib/utils';
 import { getEventPhase } from '../lib/event-phase';
+import { bolehDihapus, sudahDiarsipkan } from '../lib/arsip';
 import { PhaseTag } from '../components/ui/PhaseTag';
 
 const th = 'px-6 py-3.5 eyebrow text-ink whitespace-nowrap';
@@ -34,6 +35,18 @@ const LABEL_PERAN: Record<UserRole, string> = {
   panitia: 'Panitia',
   admin: 'Admin',
 };
+
+/** Penanda event yang sudah tidak tampil di Beranda dan Jelajah, tetapi datanya masih ada. */
+function TandaArsip({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn('sticker bg-paper text-ink/70', className)}
+      title="Sudah tidak tampil di Beranda dan Jelajah. Data pendaftaran dan sertifikat tetap tersimpan."
+    >
+      Diarsipkan
+    </span>
+  );
+}
 
 export function Dashboard() {
   const { profile } = useAuth();
@@ -176,17 +189,20 @@ export function Dashboard() {
 
   const pengajuanMenunggu = users.filter(u => u.pengajuanPanitia === 'menunggu');
 
+  /** Tombol ikon persegi: 40px di layar sentuh, 36px di layar besar. */
+  const ikon = 'h-10 w-10 p-0 sm:h-9 sm:w-9';
+
   /** Tombol aksi per event, dipakai di tabel desktop maupun kartu di HP. */
   const eventActions = (event: Event, canManage: boolean) => (
     <div className="flex flex-wrap justify-end gap-2">
       <Link to={`/event/${event.id}`} aria-label={`Lihat ${event.title}`}>
-        <Button variant="outline" size="sm" className="p-2" title="Lihat" tabIndex={-1}>
+        <Button variant="outline" size="sm" className={ikon} title="Lihat" tabIndex={-1}>
           <Eye size={16} />
         </Button>
       </Link>
       {canManage && (
         <Link to={`/edit-event/${event.id}`} aria-label={`Edit ${event.title}`}>
-          <Button variant="outline" size="sm" className="p-2" title="Edit" tabIndex={-1}>
+          <Button variant="outline" size="sm" className={ikon} title="Edit" tabIndex={-1}>
             <Edit size={16} />
           </Button>
         </Link>
@@ -197,7 +213,7 @@ export function Dashboard() {
             onClick={() => handleApprove(event)}
             size="sm"
             variant="success"
-            className="p-2"
+            className={ikon}
             title="Setujui"
             aria-label={`Setujui ${event.title}`}
           >
@@ -207,7 +223,7 @@ export function Dashboard() {
             onClick={() => setEventToReject(event)}
             size="sm"
             variant="danger"
-            className="p-2"
+            className={ikon}
             title="Tolak"
             aria-label={`Tolak ${event.title}`}
           >
@@ -215,12 +231,13 @@ export function Dashboard() {
           </Button>
         </>
       )}
-      {canManage && (
+      {/* Event selesai yang punya peserta tidak dihapus supaya kehadiran dan sertifikatnya tetap ada. */}
+      {canManage && bolehDihapus(event) && (
         <Button
           onClick={() => setEventToDelete(event.id)}
           size="sm"
           variant="outline"
-          className="p-2 hover:bg-spidol"
+          className={cn(ikon, 'hover:bg-spidol')}
           title="Hapus event"
           aria-label={`Hapus ${event.title}`}
         >
@@ -229,6 +246,29 @@ export function Dashboard() {
       )}
     </div>
   );
+
+  /** Pilihan peran pengguna, dipakai di kartu ponsel maupun tabel layar besar. */
+  const pilihPeran = (user: UserProfile) => {
+    const diriSendiri = user.uid === profile?.uid;
+    return (
+      <>
+        <label className="sr-only" htmlFor={`peran-${user.uid}`}>Tipe akun {user.name}</label>
+        <select
+          id={`peran-${user.uid}`}
+          value={user.role}
+          // Database juga menolaknya, tapi lebih jelas dicegah di sini.
+          disabled={diriSendiri || sedangDiproses === user.uid}
+          title={diriSendiri ? 'Anda tidak bisa mengubah tipe akun Anda sendiri' : undefined}
+          onChange={(e) => handleChangeRole(user, e.target.value as UserRole)}
+          className="min-h-10 rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-base font-bold text-ink outline-none transition-shadow focus:shadow-sticker disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none sm:min-h-0 sm:text-sm"
+        >
+          {(Object.keys(LABEL_PERAN) as UserRole[]).map((peran) => (
+            <option key={peran} value={peran}>{LABEL_PERAN[peran]}</option>
+          ))}
+        </select>
+      </>
+    );
+  };
 
   /** Alasan penolakan ditampilkan di bawah judul supaya penyelenggara tidak perlu membuka event. */
   const alasanDitolak = (event: Event) =>
@@ -245,16 +285,16 @@ export function Dashboard() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-ink pb-6">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-end gap-4 border-b-2 border-ink pb-5 sm:gap-6 sm:pb-6">
         <div>
           <p className="eyebrow mb-2">{profile?.role === 'admin' ? 'Panel admin' : 'Panel panitia'}</p>
-          <h2 className="editorial-title text-4xl sm:text-5xl text-ink">Dashboard Manajemen</h2>
+          <h2 className="editorial-title text-3xl sm:text-5xl text-ink">Dashboard Manajemen</h2>
           <p className="text-ink/70 mt-1">Kelola event dan permintaan Anda.</p>
         </div>
 
         {profile?.role === 'admin' && (
-          <div className="flex rounded-lg border-2 border-ink bg-white p-1 gap-1" role="tablist" aria-label="Data yang ditampilkan">
+          <div className="grid grid-cols-2 rounded-lg border-2 border-ink bg-white p-1 gap-1 md:flex" role="tablist" aria-label="Data yang ditampilkan">
             {tabs.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -262,7 +302,7 @@ export function Dashboard() {
                 aria-selected={activeTab === key}
                 onClick={() => setActiveTab(key)}
                 className={cn(
-                  'flex items-center gap-2 px-5 py-2 rounded-md text-sm font-bold transition-colors motion-reduce:transition-none',
+                  'flex min-h-10 items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-bold transition-colors motion-reduce:transition-none',
                   activeTab === key ? 'bg-stabilo text-ink' : 'text-ink/70 hover:text-ink hover:bg-ink/5'
                 )}
               >
@@ -277,30 +317,31 @@ export function Dashboard() {
         )}
       </div>
 
-      {profile?.role === 'admin' && kampus && kampus.totalEvent > 0 && (
+      {/* Hanya di tab Event: di tab Pengguna ringkasan ini mendorong daftar pengguna jauh ke bawah layar ponsel. */}
+      {profile?.role === 'admin' && activeTab === 'events' && kampus && kampus.totalEvent > 0 && (
         <section className="space-y-5">
           <h3 className="eyebrow">Ringkasan kampus</h3>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
             <StatCard icon={<CalendarCheck size={20} />} label="Event disetujui" value={kampus.totalEvent} accent="bg-white" />
             <StatCard icon={<Users size={20} />} label="Total pendaftar" value={kampus.totalPendaftar} accent="bg-stabilo" />
             <StatCard icon={<UserCheck size={20} />} label="Total hadir" value={kampus.totalHadir} accent="bg-daun" />
             <StatCard icon={<Percent size={20} />} label="Rata-rata kehadiran" value={kampus.rataKehadiran} suffix="%" accent="bg-stiker" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="mading-card p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="mading-card p-4 sm:p-6">
               <h4 className="font-editorial font-extrabold text-lg text-ink mb-4">Kategori terpopuler</h4>
               <SimpleBarChart data={kampus.kategoriTerpopuler} />
             </div>
-            <div className="mading-card p-6">
+            <div className="mading-card p-4 sm:p-6">
               <h4 className="font-editorial font-extrabold text-lg text-ink mb-4">Event dengan pendaftar terbanyak</h4>
               <SimpleBarChart data={kampus.eventTerbesar} color="bg-stiker" />
             </div>
           </div>
 
           {kampus.byFakultas.length > 0 && (
-            <div className="mading-card p-6">
+            <div className="mading-card p-4 sm:p-6">
               <h4 className="font-editorial font-extrabold text-lg text-ink mb-4">Asal peserta (semua event)</h4>
               <SimpleBarChart data={kampus.byFakultas} color="bg-daun" />
               {(kampus.pesertaUmum ?? 0) > 0 && (
@@ -318,10 +359,16 @@ export function Dashboard() {
       )}
 
       {activeTab === 'events' && events.length > 0 && (
-        <div className="flex flex-wrap gap-3" aria-label="Ringkasan status event">
-          <StatusPill status="pending" label={`Menunggu · ${counts.pending}`} />
-          <StatusPill status="approved" label={`Disetujui · ${counts.approved}`} />
-          <StatusPill status="rejected" label={`Ditolak · ${counts.rejected}`} />
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-3" aria-label="Ringkasan status event">
+            <StatusPill status="pending" label={`Menunggu · ${counts.pending}`} />
+            <StatusPill status="approved" label={`Disetujui · ${counts.approved}`} />
+            <StatusPill status="rejected" label={`Ditolak · ${counts.rejected}`} />
+          </div>
+          <p className="text-xs text-ink/70">
+            Event yang selesai lebih dari 3 hari otomatis diarsipkan: tidak tampil lagi di Beranda dan Jelajah,
+            tetapi tetap ada di sini beserta pendaftaran, kehadiran, dan sertifikatnya.
+          </p>
         </div>
       )}
 
@@ -330,7 +377,7 @@ export function Dashboard() {
       {activeTab === 'events' ? (
         <div className="space-y-4">
           {/* Layar kecil: kartu, supaya judul event tidak terpotong */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-3">
             {events.map((event) => (
               <div key={event.id} className="mading-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -344,6 +391,7 @@ export function Dashboard() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="stamp text-ink/70">{format(new Date(event.date), 'dd.MM.yyyy')}</span>
                   <PhaseTag phase={getEventPhase(event)} />
+                  {sudahDiarsipkan(event) && <TandaArsip />}
                 </div>
                 {eventActions(event, canManageEvent(event))}
               </div>
@@ -373,6 +421,7 @@ export function Dashboard() {
                       <td className={cn(td, 'whitespace-nowrap')}>
                         <p className="stamp text-ink/70">{format(new Date(event.date), 'dd.MM.yyyy')}</p>
                         <PhaseTag phase={getEventPhase(event)} className="mt-1.5" />
+                        {sudahDiarsipkan(event) && <TandaArsip className="mt-1.5 ml-1.5" />}
                       </td>
                       <td className={cn(td, 'whitespace-nowrap')}>
                         <StatusPill status={event.status} />
@@ -386,7 +435,7 @@ export function Dashboard() {
           </div>
 
           {events.length === 0 && (
-            <div className="mading-card p-12 text-center space-y-3">
+            <div className="mading-card p-6 text-center space-y-3 sm:p-12">
               <p className="editorial-title text-2xl text-ink">Belum ada event</p>
               <p className="text-ink/70">Event yang Anda buat akan muncul di sini untuk dikelola.</p>
               <Link to="/create-event" className="inline-block">
@@ -450,7 +499,35 @@ export function Dashboard() {
             </section>
           )}
 
-          <div className="mading-card overflow-hidden">
+          {/* Layar kecil: kartu per pengguna, tanpa tabel yang harus digeser ke samping. */}
+          <div className="space-y-3 md:hidden">
+            {users.map((user) => (
+              <div key={user.uid} className="mading-card p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Avatar nama={user.name} className="w-10 h-10 text-sm" />
+                  <div className="min-w-0">
+                    <p className="font-bold text-ink truncate">{user.name}</p>
+                    <p className="text-xs text-ink/60 break-all">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {pilihPeran(user)}
+                    {user.pengajuanPanitia === 'menunggu' && (
+                      <span className="sticker bg-stabilo">Mengajukan panitia</span>
+                    )}
+                  </div>
+                  <span className="stamp text-ink/60">Bergabung {format(new Date(user.createdAt), 'dd.MM.yyyy')}</span>
+                </div>
+              </div>
+            ))}
+            {users.length === 0 && (
+              <div className="mading-card p-6 text-center text-ink/60">Belum ada pengguna.</div>
+            )}
+          </div>
+
+          {/* Layar sedang ke atas: tabel */}
+          <div className="hidden md:block mading-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
@@ -461,44 +538,28 @@ export function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y-2 divide-ink/10">
-                  {users.map((user) => {
-                    const diriSendiri = user.uid === profile?.uid;
-                    return (
-                      <tr key={user.uid} className="hover:bg-stabilo/10 transition-colors motion-reduce:transition-none">
-                        <td className={td}>
-                          <div className="flex items-center gap-3">
-                            <Avatar nama={user.name} className="w-10 h-10 text-sm" />
-                            <div className="min-w-0">
-                              <p className="font-bold text-ink line-clamp-1">{user.name}</p>
-                              <p className="text-xs text-ink/60">{user.email}</p>
-                            </div>
+                  {users.map((user) => (
+                    <tr key={user.uid} className="hover:bg-stabilo/10 transition-colors motion-reduce:transition-none">
+                      <td className={td}>
+                        <div className="flex items-center gap-3">
+                          <Avatar nama={user.name} className="w-10 h-10 text-sm" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-ink line-clamp-1">{user.name}</p>
+                            <p className="text-xs text-ink/60">{user.email}</p>
                           </div>
-                        </td>
-                        <td className={cn(td, 'whitespace-nowrap')}>
-                          <label className="sr-only" htmlFor={`peran-${user.uid}`}>Tipe akun {user.name}</label>
-                          <select
-                            id={`peran-${user.uid}`}
-                            value={user.role}
-                            // Database juga menolaknya, tapi lebih jelas dicegah di sini.
-                            disabled={diriSendiri || sedangDiproses === user.uid}
-                            title={diriSendiri ? 'Anda tidak bisa mengubah tipe akun Anda sendiri' : undefined}
-                            onChange={(e) => handleChangeRole(user, e.target.value as UserRole)}
-                            className="rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold text-ink outline-none transition-shadow focus:shadow-sticker disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none"
-                          >
-                            {(Object.keys(LABEL_PERAN) as UserRole[]).map((peran) => (
-                              <option key={peran} value={peran}>{LABEL_PERAN[peran]}</option>
-                            ))}
-                          </select>
-                          {user.pengajuanPanitia === 'menunggu' && (
-                            <span className="sticker bg-stabilo ml-2">Mengajukan panitia</span>
-                          )}
-                        </td>
-                        <td className={cn(td, 'stamp text-ink/70 whitespace-nowrap')}>
-                          {format(new Date(user.createdAt), 'dd.MM.yyyy')}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        </div>
+                      </td>
+                      <td className={cn(td, 'whitespace-nowrap')}>
+                        {pilihPeran(user)}
+                        {user.pengajuanPanitia === 'menunggu' && (
+                          <span className="sticker bg-stabilo ml-2">Mengajukan panitia</span>
+                        )}
+                      </td>
+                      <td className={cn(td, 'stamp text-ink/70 whitespace-nowrap')}>
+                        {format(new Date(user.createdAt), 'dd.MM.yyyy')}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

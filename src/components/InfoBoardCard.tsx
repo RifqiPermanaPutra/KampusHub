@@ -18,7 +18,7 @@ import { cn } from '../lib/utils';
  */
 export function InfoBoardCard({ info }: { info: InfoBoard }) {
   return (
-    <div className="tape mading-card p-7 pt-9 flex flex-col justify-between lg:rotate-1 motion-reduce:rotate-0">
+    <div className="tape mading-card p-5 pt-8 sm:p-7 sm:pt-9 flex flex-col justify-between lg:rotate-1 motion-reduce:rotate-0">
       <div>
         {/* Merah hanya dipakai saat event terdekat memang mendesak; selebihnya stabilo. */}
         <span className={cn('sticker mb-4', info.mendesak ? 'bg-spidol' : 'bg-stabilo')}>
@@ -77,9 +77,9 @@ export function InfoBoardCard({ info }: { info: InfoBoard }) {
 
       <Link
         to="/explore"
-        className="text-pulpen text-sm font-extrabold mt-8 flex items-center gap-2 hover:underline group"
+        className="text-pulpen text-sm font-extrabold mt-6 flex min-h-10 items-center gap-2 hover:underline group sm:mt-8 sm:min-h-0"
       >
-        {info.berikutnya ? 'Lihat semua event' : 'Jelajahi arsip'}
+        {info.berikutnya ? 'Lihat semua event' : 'Jelajahi event'}
         <ArrowRight size={16} className="transition-transform group-hover:translate-x-1 motion-reduce:transition-none" />
       </Link>
     </div>

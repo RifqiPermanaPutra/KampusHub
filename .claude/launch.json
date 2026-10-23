@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "desain-ui",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["docs/desain-ui/server.cjs"],
+      "port": 4321
     }
   ]
 }

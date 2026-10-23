@@ -63,10 +63,10 @@ export function SertifikatSaya() {
   const lihat = (s: Sertifikat) => jalankan(s.id, () => bukaDiTabBaru(() => sertifikatService.tautanBerkas(s.filePath!)));
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="border-b-2 border-ink pb-6">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+      <div className="border-b-2 border-ink pb-5 sm:pb-6">
         <p className="eyebrow mb-2">Bukti kehadiran</p>
-        <h2 className="editorial-title text-4xl sm:text-5xl text-ink">Sertifikat Saya</h2>
+        <h2 className="editorial-title text-3xl sm:text-5xl text-ink">Sertifikat Saya</h2>
       </div>
 
       {pesan && <p className="mading-alert" role="alert">{pesan}</p>}
@@ -76,7 +76,7 @@ export function SertifikatSaya() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-ink border-t-transparent" />
         </div>
       ) : daftar.length === 0 ? (
-        <div className="mading-card p-12 text-center space-y-4">
+        <div className="mading-card p-6 text-center space-y-4 sm:p-12">
           <div className="w-14 h-14 mx-auto rounded-lg border-2 border-ink bg-stabilo flex items-center justify-center -rotate-6 shadow-sticker">
             <Award size={24} className="text-ink" />
           </div>
@@ -89,11 +89,11 @@ export function SertifikatSaya() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
           {daftar.map(s => {
             const tersedia = Boolean(s.diterbitkanPada && s.filePath);
             return (
-              <div key={s.id} className="mading-card p-6 space-y-4">
+              <div key={s.id} className="mading-card p-4 space-y-4 sm:p-6">
                 <div className="flex flex-wrap items-center gap-2">
                   {tersedia ? (
                     <span className="sticker bg-daun">Tersedia</span>

@@ -157,6 +157,18 @@ export interface RSVP {
   /** Asal peserta saat mendaftar, disalin dari profil. */
   jenisPeserta?: JenisPeserta;
   asalInstansi?: string;
+  /** Kode acak 8 karakter untuk QR dan check-in. Kosong sebelum migrasi 14 dijalankan. */
+  kodeTiket?: string;
+  metodeCheckIn?: MetodeCheckIn;
+}
+
+/** Cara peserta tercatat hadir: QR dipindai, kode diketik, atau dicentang manual. */
+export type MetodeCheckIn = 'qr' | 'kode' | 'manual';
+
+export interface HasilCheckIn {
+  /** true kalau peserta sudah tercatat hadir sebelum check-in ini. */
+  ulang: boolean;
+  peserta: RSVP;
 }
 
 export interface Comment {

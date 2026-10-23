@@ -56,11 +56,14 @@ export function PhaseTag({
  * Pita "Selesai" di sudut poster. Dipasang di dalam area poster yang
  * ber-`overflow-hidden`, jadi tidak pernah menutupi judul event.
  */
-export function DoneRibbon() {
+export function DoneRibbon({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute -right-11 top-5 z-10 rotate-45 bg-ink px-12 py-1 text-center font-mono text-[11px] font-semibold uppercase tracking-widest text-white"
+      className={cn(
+        'pointer-events-none absolute -right-11 top-5 z-10 rotate-45 bg-ink px-12 py-1 text-center font-mono text-[11px] font-semibold uppercase tracking-widest text-white',
+        className
+      )}
     >
       Selesai
     </span>

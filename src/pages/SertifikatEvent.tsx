@@ -22,6 +22,7 @@ import { namaBerkasZip, persenProgres, slugBerkas } from '../lib/sertifikat-temp
 import { getEventPhase } from '../lib/event-phase';
 import { simpanBerkas } from '../lib/unduh';
 import { usePageTitle } from '../lib/usePageTitle';
+import { useKembali } from '../lib/useKembali';
 import { Event, PengaturanSertifikat, RingkasanSertifikat } from '../types';
 
 type Pesan = { jenis: 'galat' | 'info'; teks: string } | null;
@@ -44,6 +45,8 @@ function pesanDari(err: unknown, cadangan: string): string {
 export function SertifikatEvent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Kembali ke halaman sebelumnya; kalau dibuka langsung dari tautan, ke detail event.
+  const kembali = useKembali(id ? `/event/${id}` : '/dashboard');
   const { profile } = useAuth();
   const { showToast } = useToast();
   usePageTitle('Sertifikat Event');
@@ -269,12 +272,12 @@ export function SertifikatEvent() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-wrap items-center gap-4 border-b-2 border-ink pb-6">
-        <BackButton onClick={() => navigate(-1)} />
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+      <div className="flex flex-wrap items-center gap-3 border-b-2 border-ink pb-5 sm:gap-4 sm:pb-6">
+        <BackButton onClick={kembali} />
         <div className="min-w-0 flex-1">
           <p className="eyebrow mb-1 truncate">{event.title}</p>
-          <h2 className="editorial-title text-4xl text-ink">Sertifikat Event</h2>
+          <h2 className="editorial-title text-3xl text-ink sm:text-4xl">Sertifikat Event</h2>
         </div>
       </div>
 
@@ -285,13 +288,13 @@ export function SertifikatEvent() {
         </p>
       )}
 
-      <section className="mading-card p-6 sm:p-8 space-y-6">
+      <section className="mading-card p-4 sm:p-8 space-y-6">
         <h3 className="font-editorial font-extrabold text-xl text-ink">Template dan posisi nama</h3>
         <PengaturanTemplate event={event} pengaturan={pengaturan} onTersimpan={setPengaturan} kodeTerkunci={kodeTerkunci} />
       </section>
 
       {ringkasan && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           <StatCard icon={<Users size={20} />} label="Peserta terdaftar" value={ringkasan.peserta} accent="bg-white" />
           <StatCard icon={<CheckCircle2 size={20} />} label="Hadir (check-in)" value={ringkasan.hadir} accent="bg-daun" />
           <StatCard icon={<Award size={20} />} label="Sertifikat jadi" value={ringkasan.jadi} suffix={` / ${target}`} accent="bg-stabilo" />
@@ -299,8 +302,9 @@ export function SertifikatEvent() {
         </div>
       )}
 
-      <section className="mading-card p-6 sm:p-8 space-y-5">
-        <div className="flex flex-wrap gap-3">
+      <section className="mading-card p-4 sm:p-8 space-y-5">
+        {/* Ponsel: satu tombol per baris selebar kartu, urut sesuai langkah kerjanya. */}
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-3">
           <Button variant="outline" onClick={sinkronkan} loading={sibuk === 'sinkron'} disabled={!eventSelesai || sedangBekerja}>
             <RefreshCw size={16} className="mr-2" />
             Sinkronkan Peserta
@@ -347,8 +351,11 @@ export function SertifikatEvent() {
               <div className="h-full bg-stabilo" style={{ width: `${persenProgres(ringkasan.jadi, target)}%` }} />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-ink/70">
-              <span>Sesi ini: {generate.berhasil} berhasil, {generate.gagal} gagal. Biarkan tab ini tetap terbuka.</span>
-              <Button size="sm" variant="outline" onClick={() => { berhenti.current = true; }}>
+              <span>
+                Sesi ini: {generate.berhasil} berhasil, {generate.gagal} gagal. Biarkan tab ini tetap terbuka
+                dan layar ponsel tetap menyala.
+              </span>
+              <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { berhenti.current = true; }}>
                 Hentikan setelah batch ini
               </Button>
             </div>
@@ -368,7 +375,7 @@ export function SertifikatEvent() {
         )}
       </section>
 
-      <section className="mading-card p-6 sm:p-8 space-y-4">
+      <section className="mading-card p-4 sm:p-8 space-y-4">
         <h3 className="font-editorial font-extrabold text-xl text-ink">Peserta</h3>
         <TabelSertifikat eventId={id} versi={versiTabel} onBerubah={muatUlang} />
       </section>

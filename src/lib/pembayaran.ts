@@ -23,6 +23,23 @@ export function formatRupiah(jumlah: number): string {
   return `Rp ${jumlah.toLocaleString('id-ID')}`;
 }
 
+/** Jenis pembayaran dari Midtrans menjadi nama yang dikenal peserta. */
+export function labelMetodeBayar(metode?: string): string {
+  switch (metode) {
+    case 'qris': return 'QRIS';
+    case 'gopay': return 'GoPay';
+    case 'shopeepay': return 'ShopeePay';
+    case 'bank_transfer': return 'Transfer bank';
+    case 'echannel': return 'Mandiri Bill';
+    case 'permata': return 'Transfer Permata';
+    case 'credit_card': return 'Kartu kredit';
+    case 'cstore': return 'Gerai retail';
+    case undefined:
+    case '': return 'Tidak tercatat';
+    default: return metode.replace(/_/g, ' ');
+  }
+}
+
 export function labelHarga(harga?: number): string {
   return harga && harga > 0 ? formatRupiah(harga) : 'Gratis';
 }

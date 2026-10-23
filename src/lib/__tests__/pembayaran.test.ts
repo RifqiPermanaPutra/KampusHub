@@ -5,6 +5,7 @@ import {
   formatRupiah,
   kuotaBerbayarHabis,
   labelHarga,
+  labelMetodeBayar,
   pembayaranMasihBerlaku,
   ringkasPendapatan,
   statusDariMidtrans,
@@ -22,6 +23,24 @@ describe('formatRupiah dan labelHarga', () => {
     expect(labelHarga(0)).toBe('Gratis');
     expect(labelHarga(undefined)).toBe('Gratis');
     expect(labelHarga(15000)).toBe('Rp 15.000');
+  });
+});
+
+describe('labelMetodeBayar', () => {
+  it('memakai nama yang dikenal peserta untuk metode umum', () => {
+    expect(labelMetodeBayar('qris')).toBe('QRIS');
+    expect(labelMetodeBayar('gopay')).toBe('GoPay');
+    expect(labelMetodeBayar('bank_transfer')).toBe('Transfer bank');
+    expect(labelMetodeBayar('echannel')).toBe('Mandiri Bill');
+  });
+
+  it('tetap terbaca untuk metode yang belum dikenal', () => {
+    expect(labelMetodeBayar('akulaku_paylater')).toBe('akulaku paylater');
+  });
+
+  it('menyebut tidak tercatat kalau metode kosong', () => {
+    expect(labelMetodeBayar(undefined)).toBe('Tidak tercatat');
+    expect(labelMetodeBayar('')).toBe('Tidak tercatat');
   });
 });
 

@@ -12,7 +12,7 @@
  */
 export function SetupNotice() {
   return (
-    <main className="paper-grid min-h-screen flex items-center justify-center p-6">
+    <main className="paper-grid min-h-dvh flex items-center justify-center p-6">
       <div className="mading-card tape max-w-xl w-full p-8 pt-10 space-y-5">
         <span className="sticker bg-stabilo">Belum tersambung</span>
 

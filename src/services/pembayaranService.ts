@@ -11,6 +11,12 @@ import { Pembayaran, StatusPembayaran } from '../types';
 const TABLE = 'pembayaran';
 const FUNGSI = 'pembayaran';
 
+/** Transaksi yang belum dibayar beserta event-nya, untuk halaman Pendaftaran Saya. */
+export interface PembayaranMenunggu extends Pembayaran {
+  judulEvent: string;
+  mulaiEvent: string;
+}
+
 /** Pesan galat dari Edge Function, diterjemahkan ke kalimat yang bisa dipahami peserta. */
 async function pesanFungsi(error: unknown): Promise<string> {
   const konteks = (error as { context?: unknown }).context;
@@ -64,6 +70,30 @@ export const pembayaranService = {
     } catch (error) {
       logDbError(error, OperationType.GET, TABLE);
       return null;
+    }
+  },
+
+  /**
+   * Transaksi milik pengguna yang kursinya masih ditahan. Yang batas bayarnya
+   * sudah lewat tidak ikut, karena kursinya sudah dilepas.
+   */
+  async menungguSaya(userId: string): Promise<PembayaranMenunggu[]> {
+    try {
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*, events(title, date)')
+        .eq('user_id', userId)
+        .eq('status', 'menunggu')
+        .gt('batas_bayar', new Date().toISOString())
+        .order('batas_bayar', { ascending: true });
+      if (error) throw error;
+      type Baris = PembayaranRow & { events: { title: string; date: string } | null };
+      return (data as Baris[])
+        .filter(b => b.events)
+        .map(b => ({ ...rowToPembayaran(b), judulEvent: b.events!.title, mulaiEvent: b.events!.date }));
+    } catch (error) {
+      logDbError(error, OperationType.LIST, TABLE);
+      return [];
     }
   },
 

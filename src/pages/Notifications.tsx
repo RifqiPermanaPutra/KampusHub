@@ -54,13 +54,13 @@ export function Notifications() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-ink pb-6">
+    <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-ink pb-5 sm:pb-6">
         <div>
           <p className="eyebrow mb-2">
             {notifications.length} total · {unreadCount} belum dibaca
           </p>
-          <h2 className="editorial-title text-4xl sm:text-5xl text-ink">Notifikasi</h2>
+          <h2 className="editorial-title text-3xl sm:text-5xl text-ink">Notifikasi</h2>
         </div>
         {unreadCount > 0 && (
           <Button variant="stabilo" size="sm" onClick={handleMarkAllAsRead}>
@@ -90,7 +90,7 @@ export function Notifications() {
                 }
               }}
               className={cn(
-                "rise-in p-5 rounded-xl border-2 border-ink flex gap-4 cursor-pointer transition-[transform,box-shadow] motion-reduce:transition-none",
+                "rise-in p-4 sm:p-5 rounded-xl border-2 border-ink flex gap-3 sm:gap-4 cursor-pointer transition-[transform,box-shadow] motion-reduce:transition-none",
                 notif.isRead
                   ? "bg-white hover:shadow-sticker"
                   : "bg-stabilo/35 shadow-sticker hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sticker-lg"
@@ -116,7 +116,7 @@ export function Notifications() {
             </div>
           ))
         ) : (
-          <div className="mading-card p-12 text-center space-y-4">
+          <div className="mading-card p-6 text-center space-y-4 sm:p-12">
             <div className="w-14 h-14 rounded-lg border-2 border-ink bg-daun flex items-center justify-center mx-auto -rotate-6 shadow-sticker">
               <CheckCircle2 size={26} className="text-ink" />
             </div>

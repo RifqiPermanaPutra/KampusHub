@@ -113,9 +113,22 @@ describe('rowToRsvp', () => {
   };
 
   it('menyusun id sebagai {eventId}_{userId}', () => {
-    // Bentuk inilah yang dicetak di QR e-tiket dan dipakai sebagai kode
-    // sertifikat, jadi harus sama persis dengan format sebelumnya.
+    // Bentuk ini dipakai sebagai kode verifikasi sertifikat lama, jadi harus
+    // sama persis dengan format sebelumnya.
     expect(rowToRsvp(baris).id).toBe('e1_u1');
+  });
+
+  it('memetakan kode tiket dan cara check-in', () => {
+    const rsvp = rowToRsvp({ ...baris, kode_tiket: '7F3K9Q2M', metode_check_in: 'kode' });
+    expect(rsvp.kodeTiket).toBe('7F3K9Q2M');
+    expect(rsvp.metodeCheckIn).toBe('kode');
+  });
+
+  it('membiarkan kode tiket kosong sebelum migrasi 14', () => {
+    const rsvp = rowToRsvp(baris);
+    expect(rsvp.kodeTiket).toBeUndefined();
+    expect(rsvp.metodeCheckIn).toBeUndefined();
+    expect(rowToRsvp({ ...baris, metode_check_in: null }).metodeCheckIn).toBeUndefined();
   });
 
   it('memetakan status dan waktu check-in', () => {

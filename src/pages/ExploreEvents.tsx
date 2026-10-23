@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { eventService } from '../services/eventService';
 import { Event } from '../types';
-import { EventCard, wallTilt } from '../components/EventCard';
+import { EventCard, GRID_KARTU_EVENT, wallTilt } from '../components/EventCard';
 import { Button } from '../components/ui/Button';
 import { CATEGORIES } from '../constants';
 import { Search } from 'lucide-react';
 import { EventPhase, getEventPhase } from '../lib/event-phase';
+import { ARSIP_SETELAH_SELESAI_HARI, sudahDiarsipkan } from '../lib/arsip';
 import { jenisPesertaProfil } from '../lib/peserta';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
@@ -26,7 +27,8 @@ const PHASE_FILTERS: { key: PhaseFilter; label: string; activeClass: string }[] 
   { key: 'semua', label: 'Semua waktu', activeClass: 'bg-ink text-white' },
   { key: 'live', label: 'Sedang berlangsung', activeClass: 'bg-spidol text-ink' },
   { key: 'akan', label: 'Akan datang', activeClass: 'bg-stabilo text-ink' },
-  { key: 'selesai', label: 'Sudah selesai', activeClass: 'bg-ink text-white' },
+  // Yang selesai lebih dari tiga hari lalu sudah diarsipkan, jadi yang tersisa memang baru selesai.
+  { key: 'selesai', label: 'Baru selesai', activeClass: 'bg-ink text-white' },
 ];
 
 function matchesPhase(phase: EventPhase, filter: PhaseFilter) {
@@ -38,6 +40,13 @@ function matchesPhase(phase: EventPhase, filter: PhaseFilter) {
 
 // Urutan tampil: yang sedang berlangsung dulu, lalu yang akan datang, terakhir yang selesai.
 const PHASE_ORDER: Record<EventPhase, number> = { live: 0, soon: 1, upcoming: 2, past: 3 };
+
+/** Chip filter: 40px di layar sentuh, ringkas di layar besar. */
+const kelasChip =
+  'min-h-10 shrink-0 whitespace-nowrap rounded-full border-2 px-4 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-0 sm:py-1.5';
+
+/** Baris chip yang bisa digeser sampai tepi layar ponsel. */
+const kelasBarisChip = '-mx-4 flex gap-2 overflow-x-auto px-4 py-1 scrollbar-none sm:mx-0 sm:-m-1 sm:p-1';
 
 export function ExploreEvents() {
   usePageTitle('Jelajahi Event');
@@ -54,8 +63,11 @@ export function ExploreEvents() {
   const [hanyaTerbuka, setHanyaTerbuka] = useState(jenisPesertaProfil(profile) === 'umum');
   const [searchQuery, setSearchQuery] = useState('');
   const [tick, setTick] = useState(0);
+  const kolomCari = useRef<HTMLInputElement>(null);
 
   const location = useLocation();
+  // Ikon cari di header ponsel membuka halaman ini dengan kolom cari siap diketik.
+  const fokusCari = (location.state as { fokusCari?: boolean } | null)?.fokusCari === true;
 
   useEffect(() => {
     // Read search from URL if present
@@ -64,7 +76,8 @@ export function ExploreEvents() {
     if (q) setSearchQuery(q);
 
     async function loadEvents() {
-      const data = await eventService.getAllEvents('approved');
+      // Event yang sudah diarsipkan tidak ikut diunduh; datanya tetap ada di database.
+      const data = await eventService.getAllEvents('approved', { tanpaArsip: true });
       setEvents(data);
       setLoading(false);
     }
@@ -77,6 +90,10 @@ export function ExploreEvents() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (!loading && fokusCari) kolomCari.current?.focus();
+  }, [loading, fokusCari]);
+
   const filteredEvents = useMemo(() => {
     const term = searchQuery.toLowerCase();
     return events
@@ -87,7 +104,8 @@ export function ExploreEvents() {
           e.description.toLowerCase().includes(term) ||
           e.location.toLowerCase().includes(term);
         const matchesTerbuka = !hanyaTerbuka || e.terbukaUmum === true;
-        return matchesCategory && matchesSearch && matchesTerbuka && matchesPhase(getEventPhase(e), phaseFilter);
+        return matchesCategory && matchesSearch && matchesTerbuka && !sudahDiarsipkan(e)
+          && matchesPhase(getEventPhase(e), phaseFilter);
       })
       .sort((a, b) => {
         const phaseA = getEventPhase(a);
@@ -111,8 +129,8 @@ export function ExploreEvents() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-12">
-        <div className="h-12 w-72 max-w-full rounded-lg shimmer" />
+      <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12">
+        <div className="h-10 w-72 max-w-full rounded-lg shimmer sm:h-12" />
         <EventGridSkeleton count={8} />
       </div>
     );
@@ -126,36 +144,39 @@ export function ExploreEvents() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
-      <div className="flex flex-col gap-6 md:flex-row md:items-end justify-between border-b-2 border-ink pb-8">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
+      <div className="flex flex-col gap-4 border-b-2 border-ink pb-5 sm:gap-6 sm:pb-8 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="eyebrow mb-2">
             {filteredEvents.length} event ditempel
             {liveCount > 0 && <span className="text-ink"> · {liveCount} sedang berlangsung</span>}
           </p>
-          <h2 className="editorial-title text-4xl sm:text-5xl text-ink mb-2">
+          <h2 className="editorial-title text-3xl sm:text-5xl text-ink mb-1 sm:mb-2">
             Jelajahi <span className="marker marker-draw">event</span>
           </h2>
           <p className="text-ink/70 font-medium">Temukan apa yang sedang terjadi di sekitar kampus.</p>
         </div>
 
-        <div className="relative w-full md:w-96">
+        <form role="search" onSubmit={(e) => { e.preventDefault(); kolomCari.current?.blur(); }} className="relative w-full md:w-96">
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-ink/60">
             <Search size={18} />
           </span>
+          {/* type search + enterKeyHint: keyboard ponsel menampilkan tombol "Cari". */}
           <input
-            type="text"
+            ref={kolomCari}
+            type="search"
+            enterKeyHint="search"
             placeholder="Cari judul, lokasi, atau kata kunci"
             aria-label="Cari event"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border-2 border-ink rounded-lg text-sm text-ink placeholder:text-ink/45 transition-shadow outline-none focus:shadow-sticker motion-reduce:transition-none"
+            className="w-full min-h-12 pl-10 pr-4 py-3 bg-white border-2 border-ink rounded-lg text-base text-ink placeholder:text-ink/45 transition-shadow outline-none focus:shadow-sticker motion-reduce:transition-none sm:text-sm"
           />
-        </div>
+        </form>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex gap-2 overflow-x-auto p-1 -m-1 pb-1 scrollbar-none" role="group" aria-label="Filter waktu">
+      <div className="space-y-2 sm:space-y-3">
+        <div className={kelasBarisChip} role="group" aria-label="Filter waktu">
           {PHASE_FILTERS.map(({ key, label, activeClass }) => {
             const active = phaseFilter === key;
             return (
@@ -164,7 +185,8 @@ export function ExploreEvents() {
                 onClick={() => setPhaseFilter(key)}
                 aria-pressed={active}
                 className={cn(
-                  'flex items-center gap-2 whitespace-nowrap rounded-full border-2 border-ink px-4 py-1.5 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                  kelasChip,
+                  'flex items-center gap-2 border-ink',
                   active ? activeClass : 'bg-white text-ink hover:bg-stabilo'
                 )}
               >
@@ -183,7 +205,15 @@ export function ExploreEvents() {
           })}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto p-1 -m-1 pb-2 scrollbar-none" role="group" aria-label="Filter kategori">
+        <div className={kelasBarisChip} role="group" aria-label="Filter kategori">
+          {/* Chip "Terbuka untuk umum" ikut di baris ini supaya filter tidak memakan tiga baris di ponsel. */}
+          <button
+            onClick={() => setHanyaTerbuka(terbuka => !terbuka)}
+            aria-pressed={hanyaTerbuka}
+            className={cn(kelasChip, 'border-ink', hanyaTerbuka ? 'bg-daun text-ink' : 'bg-white text-ink hover:bg-stabilo')}
+          >
+            Terbuka untuk umum
+          </button>
           {[ALL_CATEGORY, ...CATEGORIES].map((cat) => {
             const active = categoryFilter === cat;
             return (
@@ -192,7 +222,7 @@ export function ExploreEvents() {
                 onClick={() => setCategoryFilter(cat)}
                 aria-pressed={active}
                 className={cn(
-                  'whitespace-nowrap rounded-full border-2 px-4 py-1.5 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                  kelasChip,
                   active
                     ? 'border-ink bg-ink text-white'
                     : 'border-ink/30 bg-white text-ink hover:border-ink hover:bg-stabilo'
@@ -203,27 +233,22 @@ export function ExploreEvents() {
             );
           })}
         </div>
-
-        <button
-          onClick={() => setHanyaTerbuka(terbuka => !terbuka)}
-          aria-pressed={hanyaTerbuka}
-          className={cn(
-            'whitespace-nowrap rounded-full border-2 border-ink px-4 py-1.5 text-sm font-bold transition-[background-color,transform] duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-            hanyaTerbuka ? 'bg-daun text-ink' : 'bg-white text-ink hover:bg-stabilo'
-          )}
-        >
-          Terbuka untuk umum
-        </button>
+        {phaseFilter === 'selesai' && (
+          <p className="text-sm text-ink/70">
+            Event yang selesai lebih dari {ARSIP_SETELAH_SELESAI_HARI} hari lalu diarsipkan dan tidak tampil di sini.
+            Riwayat pendaftaran Anda tetap ada di menu Tiket.
+          </p>
+        )}
       </div>
 
       {filteredEvents.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-10 pt-2">
+        <div className={cn(GRID_KARTU_EVENT, 'sm:pt-2 xl:grid-cols-4')}>
           {filteredEvents.map((event, index) => (
             <EventCard key={event.id} event={event} tilt={wallTilt(index)} index={index} />
           ))}
         </div>
       ) : (
-        <div className="mading-card p-12 text-center max-w-xl mx-auto space-y-4">
+        <div className="mading-card p-6 text-center max-w-xl mx-auto space-y-4 sm:p-12">
           <div className="w-14 h-14 rounded-lg border-2 border-ink bg-stabilo flex items-center justify-center mx-auto -rotate-6 shadow-sticker">
             <Search size={22} className="text-ink" />
           </div>

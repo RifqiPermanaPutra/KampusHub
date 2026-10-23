@@ -64,9 +64,9 @@ export function VerifyCertificate() {
   }, [code]);
 
   return (
-    <div className="min-h-screen bg-paper paper-grid px-4 py-10">
+    <div className="min-h-dvh bg-paper paper-grid px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:py-10">
       <div className="max-w-xl mx-auto">
-        <div className="tape mading-card shadow-sticker-lg p-8 sm:p-10 pt-12 text-center space-y-6">
+        <div className="tape mading-card shadow-sticker-lg p-5 pt-10 sm:p-10 sm:pt-12 text-center space-y-6">
           <div>
             <p className="eyebrow mb-2">KampusHub · Sertifikat kehadiran</p>
             <h1 className="editorial-title text-3xl sm:text-4xl text-ink">Verifikasi Sertifikat</h1>
@@ -112,7 +112,7 @@ export function VerifyCertificate() {
               </div>
               <p className="font-bold text-ink">Sertifikat asli dan tercatat di sistem KampusHub.</p>
 
-              <dl className="rounded-lg border-2 border-ink bg-paper p-6 text-left grid gap-4 text-sm">
+              <dl className="rounded-lg border-2 border-ink bg-paper p-4 text-left grid gap-4 text-sm sm:p-6">
                 {state.sertifikat.nomor && (
                   <div>
                     <dt className="eyebrow">Nomor Sertifikat</dt>

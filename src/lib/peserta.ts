@@ -50,6 +50,22 @@ export function asalPeserta(
   return peserta.fakultas?.trim() || 'Tidak diketahui';
 }
 
+/**
+ * Keterangan singkat untuk mencocokkan orang dengan kartu identitasnya saat
+ * check-in: program studi dan angkatan untuk mahasiswa UIR, asal instansi
+ * untuk peserta umum.
+ */
+export function keteranganPeserta(
+  peserta: Pick<UserProfile, 'jenisPeserta' | 'asalInstansi' | 'fakultas' | 'jurusan' | 'angkatan'>,
+): string {
+  if (peserta.jenisPeserta === 'umum') {
+    return `Peserta umum · ${peserta.asalInstansi?.trim() || 'instansi belum diisi'}`;
+  }
+  const bagian = [peserta.jurusan || peserta.fakultas, peserta.angkatan ? `angkatan ${peserta.angkatan}` : '']
+    .filter(Boolean);
+  return bagian.length ? bagian.join(' · ') : 'Mahasiswa UIR';
+}
+
 export type HalanganPendaftaran = 'khusus-uir' | 'asal-belum-diisi';
 
 /**

@@ -10,6 +10,7 @@ import {
   EventStatus,
   HurufSertifikat,
   JenisPeserta,
+  MetodeCheckIn,
   Notification,
   Pembayaran,
   PengajuanPanitia,
@@ -206,14 +207,16 @@ export interface RsvpRow {
   angkatan: string | null;
   jenis_peserta?: JenisPeserta | null;
   asal_instansi?: string | null;
+  /* Dua kolom ini baru ada setelah 14_tiket_dan_check_in.sql dijalankan. */
+  kode_tiket?: string | null;
+  metode_check_in?: MetodeCheckIn | null;
   created_at: string;
 }
 
 /**
  * `id` disusun sebagai `{eventId}_{userId}`, bentuk yang sama dengan ID dokumen
- * lama. Bentuk inilah yang dicetak di QR e-tiket dan dipakai sebagai kode
- * sertifikat, jadi mempertahankannya membuat scanner dan halaman verifikasi
- * bekerja tanpa perubahan.
+ * lama. Sekarang dipakai sebagai kunci tampilan dan kode sertifikat lama; isi
+ * QR e-tiket memakai `kodeTiket`.
  */
 export function rowToRsvp(row: RsvpRow): RSVP {
   return {
@@ -229,6 +232,8 @@ export function rowToRsvp(row: RsvpRow): RSVP {
     angkatan: opsional(row.angkatan),
     jenisPeserta: opsional(row.jenis_peserta),
     asalInstansi: opsional(row.asal_instansi),
+    kodeTiket: opsional(row.kode_tiket),
+    metodeCheckIn: opsional(row.metode_check_in),
   };
 }
 

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KampusHub · Desain UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@500;600;700&family=Onest:wght@400..800&display=swap"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!--
+      Tema "Mading" disalin dari src/index.css. Warna transparan ditulis sebagai
+      rgb() biasa (ink-70, stabilo-40, dan seterusnya) supaya plugin HTML ke
+      Figma membaca warnanya dengan benar.
+    -->
+    <style type="text/tailwindcss">
+      @theme {
+        --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
+        --font-editorial: "Bricolage Grotesque", "Onest", ui-sans-serif, sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+        --color-ink: #121212;
+        --color-paper: #fafaf7;
+        --color-stabilo: #ffe14d;
+        --color-pulpen: #2f4bff;
+        --color-spidol: #ff4f3a;
+        --color-daun: #19c37d;
+        --color-stiker: #ff9ecf;
+
+        --color-ink-85: rgb(18 18 18 / 0.85);
+        --color-ink-80: rgb(18 18 18 / 0.8);
+        --color-ink-70: rgb(18 18 18 / 0.7);
+        --color-ink-60: rgb(18 18 18 / 0.6);
+        --color-ink-55: rgb(18 18 18 / 0.55);
+        --color-ink-50: rgb(18 18 18 / 0.5);
+        --color-ink-45: rgb(18 18 18 / 0.45);
+        --color-ink-40: rgb(18 18 18 / 0.4);
+        --color-ink-30: rgb(18 18 18 / 0.3);
+        --color-ink-25: rgb(18 18 18 / 0.25);
+        --color-ink-20: rgb(18 18 18 / 0.2);
+        --color-ink-15: rgb(18 18 18 / 0.15);
+        --color-ink-10: rgb(18 18 18 / 0.1);
+        --color-ink-5: rgb(18 18 18 / 0.05);
+        --color-putih-80: rgb(255 255 255 / 0.8);
+        --color-putih-40: rgb(255 255 255 / 0.4);
+        --color-putih-25: rgb(255 255 255 / 0.25);
+        --color-stabilo-40: rgb(255 225 77 / 0.4);
+        --color-stabilo-35: rgb(255 225 77 / 0.35);
+        --color-stabilo-30: rgb(255 225 77 / 0.3);
+        --color-stabilo-20: rgb(255 225 77 / 0.2);
+        --color-spidol-20: rgb(255 79 58 / 0.2);
+        --color-spidol-10: rgb(255 79 58 / 0.1);
+        --color-spidol-8: rgb(255 79 58 / 0.08);
+        --color-daun-30: rgb(25 195 125 / 0.3);
+
+        --shadow-sticker: 3px 3px 0 #121212;
+        --shadow-sticker-lg: 5px 5px 0 #121212;
+        --shadow-live-sm: 3px 3px 0 #ff4f3a;
+        --shadow-live: 4px 4px 0 #ff4f3a;
+        --shadow-live-lg: 5px 5px 0 #ff4f3a;
+      }
+
+      @layer base {
+        body {
+          @apply bg-[#e6e5df] font-sans text-ink antialiased;
+        }
+      }
+
+      @layer components {
+        .editorial-title {
+          @apply font-editorial font-extrabold tracking-tight;
+          text-wrap: balance;
+        }
+        .mading-card {
+          @apply rounded-xl border-2 border-ink bg-white shadow-sticker;
+        }
+        .mading-note {
+          @apply rounded-lg border-2 border-ink bg-stabilo-40 p-3 text-sm font-medium text-ink;
+        }
+        .mading-alert {
+          @apply rounded-lg border-2 border-spidol bg-spidol-10 p-3 text-sm font-medium text-ink;
+        }
+        .eyebrow {
+          @apply font-mono text-xs font-semibold uppercase tracking-[0.12em] text-ink-70;
+        }
+        .sticker {
+          @apply inline-flex items-center gap-1 rounded-md border-2 border-ink bg-white px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink;
+        }
+        .stamp {
+          @apply font-mono text-xs font-semibold tracking-wide;
+        }
+        .paper-grid {
+          background-color: var(--color-paper);
+          background-image:
+            linear-gradient(rgb(18 18 18 / 0.055) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(18 18 18 / 0.055) 1px, transparent 1px);
+          background-size: 22px 22px;
+        }
+        .tanpa-grid .paper-grid {
+          background-image: none;
+        }
+        /* Selotip di tepi atas kartu yang "ditempel" (.tape::before di aplikasi). */
+        .selotip {
+          position: absolute;
+          top: -11px;
+          left: 50%;
+          z-index: 2;
+          width: 68px;
+          height: 20px;
+          margin-left: -34px;
+          transform: rotate(-3deg);
+          border: 1px solid rgb(18 18 18 / 0.15);
+          background: rgb(255 255 255 / 0.72);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="papan"></div>
+    <script src="ikon.js"></script>
+    <script src="data.js"></script>
+    <script src="komponen.js"></script>
+    <script src="layar.js"></script>
+  </body>
+</html>

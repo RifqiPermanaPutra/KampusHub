@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, CalendarPlus, MapPin, Send, MessageSquare, Share2, ShieldCheck, Trash2, Download, Edit, BarChart3, Bookmark, BookmarkCheck, Hourglass, ScanLine, Ticket, Award } from 'lucide-react';
 import { format } from 'date-fns';
@@ -29,9 +29,11 @@ import { useToast } from '../contexts/ToastContext';
 import { usePageTitle } from '../lib/usePageTitle';
 import { cn } from '../lib/utils';
 import { downloadEventIcs } from '../lib/calendar';
-import { deadlineNote, getRegistrationState, registrationButtonLabel } from '../lib/registration';
+import { bolehBatalkan, deadlineNote, getRegistrationState, registrationButtonLabel } from '../lib/registration';
+import { bolehDihapus, sudahDiarsipkan, waktuArsip } from '../lib/arsip';
 import { asalPeserta, halanganPendaftaran, pesanHalangan } from '../lib/peserta';
 import { KonfirmasiBatalDaftar } from '../components/KonfirmasiBatalDaftar';
+import { KonfirmasiDaftar } from '../components/KonfirmasiDaftar';
 import { PanelBayar } from '../components/PanelBayar';
 import { eventBerbayar, labelHarga } from '../lib/pembayaran';
 import { shareEvent } from '../lib/share';
@@ -117,7 +119,9 @@ function LiveProgress({ jadwal }: { jadwal: JadwalEvent }) {
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="stamp text-ink/70">Sudah berjalan {label} (perkiraan durasi 4 jam)</p>
+      <p className="stamp text-ink/70">
+        Sudah berjalan {label}{jadwal.endDate ? '' : ' (perkiraan durasi 4 jam)'}
+      </p>
     </div>
   );
 }
@@ -137,6 +141,7 @@ export function EventDetail() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDaftarModal, setShowDaftarModal] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
   // Cap "Terdaftar" yang muncul sesaat setelah pendaftaran berhasil.
@@ -146,8 +151,22 @@ export function EventDetail() {
   const [tersimpan, setTersimpan] = useState(false);
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  // Tombol daftar di kartu pendaftaran sudah tergulir lewat ke atas layar
+  // (dipakai bar daftar di ponsel).
+  const kartuDaftarRef = useRef<HTMLDivElement>(null);
+  const [kartuLewat, setKartuLewat] = useState(false);
 
   usePageTitle(event?.title);
+
+  useEffect(() => {
+    const kartu = kartuDaftarRef.current;
+    if (!kartu) return;
+    const pengamat = new IntersectionObserver(([entri]) => {
+      setKartuLewat(!entri.isIntersecting && entri.boundingClientRect.top < 0);
+    });
+    pengamat.observe(kartu);
+    return () => pengamat.disconnect();
+  }, [loading, event?.id]);
 
   useEffect(() => {
     if (!id) return;
@@ -383,9 +402,9 @@ export function EventDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 gap-6 sm:gap-10 lg:grid-cols-3 lg:gap-12">
         <div className="lg:col-span-2 space-y-6">
-          <div className="h-56 rounded-xl shimmer" />
+          <div className="h-48 rounded-xl shimmer sm:h-56" />
           <div className="h-6 w-40 rounded-md shimmer" />
           <div className="h-32 rounded-xl shimmer" />
         </div>
@@ -399,7 +418,7 @@ export function EventDetail() {
 
   if (!event) {
     return (
-      <div className="mading-card max-w-md mx-auto text-center p-12 space-y-4">
+      <div className="mading-card max-w-md mx-auto text-center p-6 space-y-4 sm:p-12">
         <h2 className="editorial-title text-3xl text-ink">Event tidak ditemukan</h2>
         <p className="text-ink/70">Poster ini mungkin sudah dicabut dari mading atau tautannya salah.</p>
         <Link to="/" className="inline-block font-extrabold text-pulpen hover:underline">Kembali ke beranda</Link>
@@ -422,14 +441,31 @@ export function EventDetail() {
   // Aturan yang sama ditegakkan fungsi rsvp_event di database.
   const halangan = halanganPendaftaran(event, profile);
   const quotaPercent = event.capacity ? Math.min((jumlahTerdaftar / event.capacity) * 100, 100) : 0;
+  const berbayar = eventBerbayar(event);
 
+  /*
+   * Bar daftar di bawah layar ponsel, seperti tombol Beli di situs tiket.
+   * Hanya untuk yang belum terdaftar dan masih bisa mendaftar. Event gratis
+   * langsung membuka ringkasan pendaftaran; event berbayar menggulir ke panel
+   * bayar, karena alur Midtrans ada di sana.
+   */
+  const bolehBarDaftar = event.status === 'approved' && !myRsvp && !registrationClosed && halangan === null && Boolean(profile);
+  const tampilBarDaftar = bolehBarDaftar && kartuLewat;
+  const keKartuDaftar = () => kartuDaftarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  /*
+   * Tiga bagian dalam satu grid. Di ponsel urutannya: info utama, kartu
+   * pendaftaran, lalu poster dan sisanya, jadi tombol Daftar terlihat tanpa
+   * harus melewati deskripsi dan seluruh tanya jawab. Di layar besar kartu
+   * pendaftaran pindah ke kolom kanan dan menempel saat digulir.
+   */
   return (
-    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
-      {/* Main Content */}
-      <div className="lg:col-span-2 space-y-10 min-w-0">
+    <div className="max-w-6xl mx-auto grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3 lg:grid-rows-[auto_1fr] lg:gap-x-12 lg:gap-y-10">
+      {/* Info utama */}
+      <div className="min-w-0 space-y-6 sm:space-y-8 lg:col-span-2">
         {/* Poster judul */}
         <header className={cn(
-          'tape mading-card p-6 pt-10 sm:p-10',
+          'tape mading-card p-5 pt-9 sm:p-10',
           isLive ? 'shadow-[5px_5px_0_var(--color-spidol)]' : 'shadow-sticker-lg',
           isPast && 'grayscale',
           style.poster,
@@ -438,7 +474,7 @@ export function EventDetail() {
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[10px]" aria-hidden="true">
             <span className="absolute -right-20 -top-24 h-72 w-72 rounded-full border-2 border-current opacity-30" />
           </div>
-          <div className="relative flex flex-wrap gap-2 mb-5">
+          <div className="relative flex flex-wrap gap-2 mb-4 sm:mb-5">
             <PhaseTag phase={phase} />
             <span className="sticker">{event.category}</span>
             {event.status !== 'approved' && <StatusPill status={event.status} />}
@@ -446,18 +482,20 @@ export function EventDetail() {
             {event.terbukaUmum && <span className="sticker bg-daun">Terbuka untuk umum</span>}
             <span className="sticker">{labelHarga(event.harga)}</span>
           </div>
-          <h1 className="relative editorial-title text-4xl sm:text-5xl lg:text-6xl leading-[0.95]">
+          <h1 className="relative editorial-title text-3xl sm:text-5xl lg:text-6xl leading-[0.95] break-words">
             {event.title}
           </h1>
-          <div className="relative mt-6 flex flex-wrap gap-x-6 gap-y-2 font-semibold">
-            <span className="flex items-center gap-2">
-              <Calendar size={18} className="shrink-0" />
-              {format(eventDate, 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })}
-              {' sampai '}
-              {format(eventEnd, selesaiHariSama ? 'HH.mm' : 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })} WIB
+          <div className="relative mt-5 flex flex-col gap-2 text-sm font-semibold sm:mt-6 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:text-base">
+            <span className="flex items-start gap-2">
+              <Calendar size={18} className="mt-0.5 shrink-0" />
+              <span>
+                {format(eventDate, 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })}
+                {' sampai '}
+                {format(eventEnd, selesaiHariSama ? 'HH.mm' : 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })} WIB
+              </span>
             </span>
-            <span className="flex items-center gap-2 min-w-0">
-              <MapPin size={18} className="shrink-0" />
+            <span className="flex items-start gap-2 min-w-0">
+              <MapPin size={18} className="mt-0.5 shrink-0" />
               {event.location}
             </span>
           </div>
@@ -466,6 +504,13 @@ export function EventDetail() {
         {canManage && event.status === 'pending' && (
           <div className="mading-note" role="status">
             Event ini belum tampil di mading. Menunggu persetujuan admin.
+          </div>
+        )}
+
+        {sudahDiarsipkan(event) && (
+          <div className="mading-note" role="status">
+            Event ini sudah diarsipkan sejak {format(waktuArsip(event), 'd MMMM yyyy', { locale: localeId })} dan
+            tidak tampil lagi di Beranda maupun Jelajah. Data pendaftaran, kehadiran, dan sertifikatnya tetap tersimpan.
           </div>
         )}
 
@@ -483,68 +528,12 @@ export function EventDetail() {
           </div>
         )}
 
-        {event.posterUrl && (
-          <figure className={cn('mading-card bg-white p-2 -rotate-1 motion-reduce:rotate-0', isPast && 'grayscale opacity-90')}>
-            {/* Ukuran asli, tidak dipotong: di sinilah poster dibaca secara utuh. */}
-            <img
-              src={event.posterUrl}
-              alt={`Poster ${event.title}`}
-              className="w-full h-auto max-h-[80vh] object-contain rounded-md border-2 border-ink bg-white"
-              referrerPolicy="no-referrer"
-            />
-          </figure>
-        )}
-
-        <section className="mading-card p-6 sm:p-8 space-y-3">
-          <h3 className="eyebrow">Tentang event ini</h3>
-          <p className="text-lg text-ink/85 leading-relaxed whitespace-pre-wrap">
-            {event.description}
-          </p>
-        </section>
-
-        <ReviewSection event={event} myRsvp={myRsvp} profile={profile} />
-
-        {/* Comments Section */}
-        <section className="pt-8 border-t-2 border-ink space-y-6">
-          <div className="flex items-center gap-3">
-            <MessageSquare size={20} className="text-ink" />
-            <h3 className="editorial-title text-2xl text-ink">Tanya jawab</h3>
-            <span className="sticker bg-stabilo">{comments.length}</span>
-          </div>
-
-          <form onSubmit={handlePostComment} className="flex items-start gap-3">
-            <Input
-              placeholder="Tulis pertanyaan untuk panitia"
-              aria-label="Komentar"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" className="px-4 py-3 shrink-0" aria-label="Kirim komentar">
-              <Send size={18} />
-            </Button>
-          </form>
-
-          {commentError && <p className="mading-alert" role="alert">{commentError}</p>}
-
-          <div className="space-y-4">
-            {comments.map((comment) => (
-              <div key={comment.id} className="mading-card p-5 space-y-2">
-                <div className="flex justify-between items-center gap-3">
-                  <span className="font-bold text-sm text-ink">{comment.userName}</span>
-                  <span className="stamp text-ink/60 shrink-0">{format(new Date(comment.createdAt), 'dd.MM · HH.mm')}</span>
-                </div>
-                <p className="text-sm text-ink/80 leading-relaxed">{comment.body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
-      {/* Sidebar */}
-      <aside className="space-y-8 min-w-0">
-        {/* Kartu pendaftaran */}
-        <div className="relative mading-card p-6 space-y-6 lg:sticky lg:top-2">
+      {/* Kartu pendaftaran: di ponsel tepat setelah info utama, di layar besar kolom kanan. */}
+      <aside className="min-w-0 space-y-8 lg:col-start-3 lg:row-span-2 lg:row-start-1">
+        {/* top-24: di bawah header yang ikut menempel di atas layar. */}
+        <div className="relative mading-card p-5 space-y-5 sm:p-6 sm:space-y-6 lg:sticky lg:top-24">
           {showStamp && (
             <span
               role="status"
@@ -566,7 +555,7 @@ export function EventDetail() {
 
           {isPast && (
             <div className="rounded-lg border-2 border-ink bg-ink p-3 text-sm font-semibold text-white">
-              Event sudah selesai. Kalau Anda check-in, sertifikat bisa diunduh dari halaman Pendaftaran Saya.
+              Event sudah selesai. Sertifikat peserta yang hadir muncul di menu Sertifikat Saya setelah diterbitkan panitia.
             </div>
           )}
 
@@ -633,7 +622,9 @@ export function EventDetail() {
             <p className="mading-alert" role="status">{pesanHalangan(halangan)}</p>
           )}
 
-          {eventBerbayar(event) && profile ? (
+          {/* Tombol utama. Bar daftar di ponsel muncul setelah bagian ini tergulir lewat. */}
+          <div ref={kartuDaftarRef} className="empty:hidden">
+          {berbayar && profile ? (
             <PanelBayar
               event={event}
               userId={profile.uid}
@@ -647,12 +638,15 @@ export function EventDetail() {
                 showToast('Pembayaran diterima. E-tiket Anda sudah terbit.', 'success');
               }}
             />
+          ) : myRsvp && !bolehBatalkan(myRsvp, event) ? (
+            // Sudah hadir atau event sudah selesai: tidak ada lagi yang bisa dibatalkan.
+            null
           ) : (
           <Button
             className="w-full"
             size="lg"
             variant={myRsvp ? 'outline' : isFull ? 'stabilo' : 'primary'}
-            onClick={myRsvp ? () => setShowCancelModal(true) : handleRSVP}
+            onClick={() => (myRsvp ? setShowCancelModal(true) : setShowDaftarModal(true))}
             loading={actionLoading}
             disabled={
               event.status !== 'approved' ||
@@ -670,6 +664,7 @@ export function EventDetail() {
                     : 'Daftar Sekarang →'}
           </Button>
           )}
+          </div>
 
           {catatanDeadline && !isPast && (
             <p className={cn('text-xs font-semibold text-center', regState === 'closed-deadline' ? 'text-ink' : 'text-ink/70')}>
@@ -790,19 +785,113 @@ export function EventDetail() {
                 </Button>
               </Link>
 
-              <Button
-                onClick={() => setShowDeleteModal(true)}
-                variant="outline"
-                className="w-full hover:bg-spidol"
-                disabled={actionLoading}
-              >
-                <Trash2 size={18} className="mr-2" />
-                Hapus Event
-              </Button>
+              {bolehDihapus(event) ? (
+                <Button
+                  onClick={() => setShowDeleteModal(true)}
+                  variant="outline"
+                  className="w-full hover:bg-spidol"
+                  disabled={actionLoading}
+                >
+                  <Trash2 size={18} className="mr-2" />
+                  Hapus Event
+                </Button>
+              ) : (
+                // Menghapus event ikut membuang kehadiran dan sertifikat (on delete cascade).
+                <p className="text-xs text-ink/70">
+                  Event yang sudah selesai dan punya peserta tidak bisa dihapus, supaya data kehadiran dan
+                  sertifikatnya tetap ada. Event ini otomatis hilang dari mading 3 hari setelah selesai.
+                </p>
+              )}
             </div>
           )}
         </div>
       </aside>
+
+      {/* Poster, deskripsi, penilaian, dan tanya jawab */}
+      <div className="min-w-0 space-y-8 sm:space-y-10 lg:col-span-2 lg:col-start-1 lg:row-start-2">
+        {event.posterUrl && (
+          <figure className={cn('mading-card bg-white p-2 sm:-rotate-1 motion-reduce:rotate-0', isPast && 'grayscale opacity-90')}>
+            {/* Ukuran asli, tidak dipotong: di sinilah poster dibaca secara utuh. */}
+            <img
+              src={event.posterUrl}
+              alt={`Poster ${event.title}`}
+              className="w-full h-auto max-h-[80dvh] object-contain rounded-md border-2 border-ink bg-white"
+              referrerPolicy="no-referrer"
+            />
+          </figure>
+        )}
+
+        <section className="mading-card p-5 sm:p-8 space-y-3">
+          <h3 className="eyebrow">Tentang event ini</h3>
+          <p className="text-base text-ink/85 leading-relaxed whitespace-pre-wrap break-words sm:text-lg">
+            {event.description}
+          </p>
+        </section>
+
+        <ReviewSection event={event} myRsvp={myRsvp} profile={profile} />
+
+        {/* Comments Section */}
+        <section className="pt-6 border-t-2 border-ink space-y-5 sm:pt-8 sm:space-y-6">
+          <div className="flex items-center gap-3">
+            <MessageSquare size={20} className="text-ink" />
+            <h3 className="editorial-title text-2xl text-ink">Tanya jawab</h3>
+            <span className="sticker bg-stabilo">{comments.length}</span>
+          </div>
+
+          <form onSubmit={handlePostComment} className="flex items-start gap-2 sm:gap-3">
+            <Input
+              placeholder="Tulis pertanyaan untuk panitia"
+              aria-label="Komentar"
+              enterKeyHint="send"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" className="h-11 w-12 shrink-0 px-0" aria-label="Kirim komentar">
+              <Send size={18} />
+            </Button>
+          </form>
+
+          {commentError && <p className="mading-alert" role="alert">{commentError}</p>}
+
+          <div className="space-y-3 sm:space-y-4">
+            {comments.map((comment) => (
+              <div key={comment.id} className="mading-card p-4 space-y-2 sm:p-5">
+                <div className="flex justify-between items-center gap-3">
+                  <span className="font-bold text-sm text-ink truncate">{comment.userName}</span>
+                  <span className="stamp text-ink/60 shrink-0">{format(new Date(comment.createdAt), 'dd.MM · HH.mm')}</span>
+                </div>
+                <p className="text-sm text-ink/80 leading-relaxed break-words">{comment.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Ruang di bawah tanya jawab supaya isinya tidak tertutup bar daftar. */}
+      {bolehBarDaftar && <div aria-hidden="true" className="h-16 lg:hidden" />}
+
+      {tampilBarDaftar && (
+        <div className="rise-in fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-20 border-t-2 border-ink bg-paper py-2.5 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] lg:hidden">
+          <div className="mx-auto flex max-w-xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-extrabold leading-tight text-ink">{labelHarga(event.harga)}</p>
+              <p className="truncate text-xs text-ink/70">
+                {isFull && !berbayar
+                  ? 'Kuota penuh, Anda masuk daftar tunggu'
+                  : quotaSticker ?? (catatanDeadline || event.location)}
+              </p>
+            </div>
+            <Button
+              variant={isFull && !berbayar ? 'stabilo' : 'primary'}
+              onClick={berbayar ? keKartuDaftar : () => setShowDaftarModal(true)}
+              loading={actionLoading}
+            >
+              {berbayar ? 'Bayar & Daftar' : isFull ? 'Ikut Antre' : 'Daftar'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {shareUrl && (
         <Modal onClose={() => setShareUrl(null)} label="Bagikan event" className="max-w-md">
@@ -817,11 +906,25 @@ export function EventDetail() {
               aria-label="Tautan event"
               onFocus={(e) => e.currentTarget.select()}
               autoFocus
-              className="w-full rounded-lg border-2 border-ink bg-white px-3 py-2 font-mono text-xs text-ink outline-none focus:shadow-sticker"
+              className="w-full min-h-11 rounded-lg border-2 border-ink bg-white px-3 py-2 font-mono text-base text-ink outline-none focus:shadow-sticker sm:text-xs"
             />
             <Button className="w-full" onClick={() => setShareUrl(null)}>Tutup</Button>
           </div>
         </Modal>
+      )}
+
+      {showDaftarModal && profile && !myRsvp && (
+        <KonfirmasiDaftar
+          event={event}
+          profil={profile}
+          daftarTunggu={isFull}
+          memproses={actionLoading}
+          onBatal={() => setShowDaftarModal(false)}
+          onYakin={async () => {
+            await handleRSVP();
+            setShowDaftarModal(false);
+          }}
+        />
       )}
 
       {showCancelModal && myRsvp && (

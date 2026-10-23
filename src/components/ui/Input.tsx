@@ -38,7 +38,8 @@ export function Input({ className, label, error, id, type, ...props }: InputProp
           id={inputId}
           type={tipeAktif}
           className={cn(
-            'w-full rounded-lg bg-white border-2 border-ink px-4 py-2.5 text-sm text-ink transition-shadow outline-none placeholder:text-ink/45 focus:shadow-sticker focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulpen',
+            // text-base di ponsel: Safari memperbesar layar kalau huruf kolom di bawah 16px.
+            'w-full min-h-11 rounded-lg bg-white border-2 border-ink px-4 py-2.5 text-base text-ink transition-shadow outline-none placeholder:text-ink/45 focus:shadow-sticker focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulpen sm:text-sm',
             // Ruang untuk tombol mata supaya teks tidak tertimpa ikon.
             isPassword && 'pr-12',
             error && 'border-spidol focus:shadow-[3px_3px_0_var(--color-spidol)]',
@@ -55,7 +56,7 @@ export function Input({ className, label, error, id, type, ...props }: InputProp
             // type="button" penting: tanpa itu tombol ini akan mengirim formulir.
             aria-label={terlihat ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
             aria-pressed={terlihat}
-            className="absolute inset-y-0 right-0 flex items-center px-3.5 text-ink/55 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulpen rounded-r-lg"
+            className="absolute inset-y-0 right-0 flex min-w-11 items-center justify-center px-3.5 text-ink/55 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulpen rounded-r-lg"
           >
             {terlihat ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
           </button>

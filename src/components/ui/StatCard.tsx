@@ -25,11 +25,11 @@ export function StatCard({
 }) {
   const shown = useCountUp(value);
   return (
-    <div className={cn('mading-card p-5 transition-transform duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0', className)}>
-      <div className={cn('w-10 h-10 rounded-lg border-2 border-ink flex items-center justify-center mb-4 text-ink', accent)}>
+    <div className={cn('mading-card p-4 transition-transform duration-150 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-5', className)}>
+      <div className={cn('w-9 h-9 rounded-lg border-2 border-ink flex items-center justify-center mb-3 text-ink sm:w-10 sm:h-10 sm:mb-4', accent)}>
         {icon}
       </div>
-      <p className="font-editorial text-4xl font-extrabold text-ink tabular-nums leading-none">
+      <p className="font-editorial text-3xl font-extrabold text-ink tabular-nums leading-none break-words sm:text-4xl">
         {shown}{suffix}
       </p>
       <p className="eyebrow mt-2">{label}</p>

@@ -31,7 +31,8 @@ export function Select({ label, pilihan, kosong, id, className, ...props }: Sele
       <select
         id={selectId}
         className={cn(
-          'w-full rounded-lg bg-white border-2 border-ink px-4 py-2.5 text-sm text-ink transition-shadow outline-none focus:shadow-sticker focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulpen disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none',
+          // text-base di ponsel: Safari memperbesar layar kalau huruf pilihan di bawah 16px.
+          'w-full min-h-11 rounded-lg bg-white border-2 border-ink px-4 py-2.5 text-base text-ink transition-shadow outline-none focus:shadow-sticker focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulpen disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none sm:text-sm',
           className
         )}
         {...props}

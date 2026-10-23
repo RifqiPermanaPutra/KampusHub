@@ -103,7 +103,7 @@ export function ReviewSection({
             rows={3}
             placeholder="Ceritakan pengalamanmu (opsional)"
             aria-label="Ulasan"
-            className="w-full rounded-lg border-2 border-ink bg-white p-3 text-sm text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none"
+            className="w-full rounded-lg border-2 border-ink bg-white p-3 text-base text-ink placeholder:text-ink/45 outline-none transition-shadow focus:shadow-sticker motion-reduce:transition-none sm:text-sm"
           />
           <div className="flex items-center justify-between gap-3">
             <span className="stamp text-ink/60">{comment.length}/500</span>
@@ -116,7 +116,7 @@ export function ReviewSection({
 
       {!bolehMenilai && profile && myRsvp?.status !== 'checked-in' && (
         <p className="mading-note">
-          Penilaian hanya bisa diberikan peserta yang tercatat hadir lewat check-in QR.
+          Penilaian hanya bisa diberikan peserta yang tercatat hadir saat check-in.
         </p>
       )}
 

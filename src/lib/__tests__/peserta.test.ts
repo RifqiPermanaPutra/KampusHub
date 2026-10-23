@@ -4,6 +4,7 @@ import {
   asalPeserta,
   halanganPendaftaran,
   jenisPesertaProfil,
+  keteranganPeserta,
   labelJenisPeserta,
   pesanHalangan,
 } from '../peserta';
@@ -48,6 +49,29 @@ describe('asalPeserta', () => {
     expect(asalPeserta({ jenisPeserta: 'umum', asalInstansi: '   ' })).toBe('Umum');
     expect(asalPeserta({ jenisPeserta: 'uir' })).toBe('Tidak diketahui');
     expect(asalPeserta({})).toBe('Tidak diketahui');
+  });
+});
+
+describe('keteranganPeserta', () => {
+  it('memakai program studi dan angkatan untuk mahasiswa UIR', () => {
+    expect(keteranganPeserta({ jenisPeserta: 'uir', fakultas: 'Teknik', jurusan: 'Teknik Informatika', angkatan: '2023' }))
+      .toBe('Teknik Informatika · angkatan 2023');
+  });
+
+  it('memakai fakultas kalau program studi kosong', () => {
+    expect(keteranganPeserta({ fakultas: 'Teknik' })).toBe('Teknik');
+    expect(keteranganPeserta({ fakultas: 'Teknik', angkatan: '2022' })).toBe('Teknik · angkatan 2022');
+  });
+
+  it('menyebut asal instansi untuk peserta umum', () => {
+    expect(keteranganPeserta({ jenisPeserta: 'umum', asalInstansi: 'SMA N 1 Pekanbaru' }))
+      .toBe('Peserta umum · SMA N 1 Pekanbaru');
+    expect(keteranganPeserta({ jenisPeserta: 'umum', asalInstansi: '  ' }))
+      .toBe('Peserta umum · instansi belum diisi');
+  });
+
+  it('tidak pernah mengembalikan teks kosong', () => {
+    expect(keteranganPeserta({})).toBe('Mahasiswa UIR');
   });
 });
 

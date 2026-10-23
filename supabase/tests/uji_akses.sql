@@ -1,6 +1,6 @@
--- Uji hak akses sertifikat dan pembatas permintaan.
+-- Uji hak akses sertifikat, pembatas permintaan, dan check-in.
 --
--- Cara pakai: jalankan SETELAH migrasi 01 sampai 13, di Supabase Dashboard >
+-- Cara pakai: jalankan SETELAH migrasi 01 sampai 14, di Supabase Dashboard >
 -- SQL Editor, sekaligus satu berkas. Semua data uji dibuat di dalam satu
 -- transaksi yang dibatalkan di akhir (rollback), jadi database tidak berubah.
 --
@@ -451,5 +451,175 @@ begin
 end $$;
 
 select pg_temp.keluar();
+
+-- ============================================================
+-- 10. Check-in
+--
+-- Event D sedang berlangsung, event E baru mulai besok, dan event F sudah
+-- selesai 3 jam lalu. Ketiganya milik panitia A. Di event D, peserta 1 dan 2
+-- terdaftar, peserta 3 di daftar tunggu.
+-- ============================================================
+
+insert into public.events (id, title, category, date, end_date, location, status, organizer_id, organizer_name) values
+  ('e0000000-0000-4000-8000-00000000000d', 'Uji Check-in D', 'Seminar', now() - interval '30 minutes', now() + interval '1 hour',
+   'Aula', 'approved', 'c0000000-0000-4000-8000-000000000001', 'Uji Panitia A'),
+  ('e0000000-0000-4000-8000-00000000000e', 'Uji Check-in E', 'Seminar', now() + interval '1 day', now() + interval '1 day 2 hours',
+   'Aula', 'approved', 'c0000000-0000-4000-8000-000000000001', 'Uji Panitia A'),
+  ('e0000000-0000-4000-8000-00000000000f', 'Uji Check-in F', 'Seminar', now() - interval '6 hours', now() - interval '3 hours',
+   'Aula', 'approved', 'c0000000-0000-4000-8000-000000000001', 'Uji Panitia A');
+
+insert into public.rsvps (event_id, user_id, user_name, status) values
+  ('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000011', 'Uji Peserta Satu', 'registered'),
+  ('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000012', 'Uji Peserta Dua', 'registered'),
+  ('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000013', 'Uji Peserta Tiga', 'waitlist'),
+  ('e0000000-0000-4000-8000-00000000000e', 'c0000000-0000-4000-8000-000000000011', 'Uji Peserta Satu', 'registered'),
+  ('e0000000-0000-4000-8000-00000000000f', 'c0000000-0000-4000-8000-000000000011', 'Uji Peserta Satu', 'registered'),
+  ('e0000000-0000-4000-8000-00000000000f', 'c0000000-0000-4000-8000-000000000012', 'Uji Peserta Dua', 'registered');
+
+select set_config('uji.kode_d1', (select kode_tiket from public.rsvps
+  where event_id = 'e0000000-0000-4000-8000-00000000000d' and user_id = 'c0000000-0000-4000-8000-000000000011'), true);
+select set_config('uji.kode_d2', (select kode_tiket from public.rsvps
+  where event_id = 'e0000000-0000-4000-8000-00000000000d' and user_id = 'c0000000-0000-4000-8000-000000000012'), true);
+select set_config('uji.kode_e1', (select kode_tiket from public.rsvps
+  where event_id = 'e0000000-0000-4000-8000-00000000000e' and user_id = 'c0000000-0000-4000-8000-000000000011'), true);
+select set_config('uji.kode_f1', (select kode_tiket from public.rsvps
+  where event_id = 'e0000000-0000-4000-8000-00000000000f' and user_id = 'c0000000-0000-4000-8000-000000000011'), true);
+
+select pg_temp.pastikan(
+  (select bool_and(kode_tiket ~ '^[2-9A-HJKMNP-Z]{8}$') from public.rsvps),
+  'setiap pendaftaran otomatis punya kode tiket 8 karakter tanpa huruf yang mudah tertukar');
+select pg_temp.pastikan(
+  (select count(*) = count(distinct kode_tiket) from public.rsvps),
+  'kode tiket tidak ada yang kembar');
+select pg_temp.pastikan(
+  public.normalisasi_kode_tiket('kh 7f3k-9q2m') = '7F3K9Q2M'
+    and public.normalisasi_kode_tiket('KH-7F3K-9Q2M') = '7F3K9Q2M'
+    and public.normalisasi_kode_tiket('KH7F3K9Q') = 'KH7F3K9Q',
+  'kode dikenali dalam bentuk cetak, huruf kecil, dan tanpa awalan');
+select pg_temp.pastikan(
+  public.normalisasi_kode_tiket('e0000000-0000-4000-8000-00000000000d_c0000000-0000-4000-8000-000000000011') is null
+    and public.normalisasi_kode_tiket('7F3K9Q2O') is null,
+  'QR lama dan huruf di luar abjad tidak dikenali sebagai kode tiket');
+
+-- Orang lain.
+select pg_temp.masuk_sebagai('c0000000-0000-4000-8000-000000000002');
+select pg_temp.pastikan_ditolak(
+  format($$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d', %L)$$, current_setting('uji.kode_d1')),
+  'Hanya penyelenggara', 'panitia lain tidak bisa memindai tiket event D');
+select pg_temp.pastikan_ditolak(
+  $$select public.check_in_manual('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000011')$$,
+  'Hanya penyelenggara', 'panitia lain tidak bisa check-in manual di event D');
+
+select pg_temp.masuk_sebagai('c0000000-0000-4000-8000-000000000011');
+select pg_temp.pastikan_ditolak(
+  format($$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d', %L)$$, current_setting('uji.kode_d1')),
+  'Hanya penyelenggara', 'peserta tidak bisa check-in dirinya sendiri');
+select pg_temp.pastikan(
+  pg_temp.berubah($$update public.rsvps set status = 'checked-in' where user_id = auth.uid()$$) = 0,
+  'peserta tidak bisa mengubah status pendaftarannya lewat tabel');
+select pg_temp.pastikan(
+  pg_temp.terlihat($$select count(*) from public.rsvps where event_id = 'e0000000-0000-4000-8000-00000000000d'$$) = 1,
+  'peserta hanya bisa membaca kode tiketnya sendiri');
+select pg_temp.pastikan_ditolak(
+  $$select public.catat_check_in('e0000000-0000-4000-8000-00000000000d', auth.uid(), 'qr')$$,
+  'permission denied', 'fungsi inti check-in tidak bisa dipanggil langsung');
+select pg_temp.pastikan_ditolak(
+  $$select public.buat_kode_tiket()$$,
+  'permission denied', 'pembuat kode tiket tidak bisa dipanggil langsung');
+
+select pg_temp.masuk_tamu();
+select pg_temp.pastikan_ditolak(
+  format($$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d', %L)$$, current_setting('uji.kode_d1')),
+  'permission denied', 'tamu tidak bisa memanggil check-in');
+
+-- Panitia A di event D yang sedang berlangsung.
+select pg_temp.masuk_sebagai('c0000000-0000-4000-8000-000000000001');
+
+do $$
+declare
+  v      jsonb;
+  v_d1   text := current_setting('uji.kode_d1');
+  v_d2   text := current_setting('uji.kode_d2');
+begin
+  v := public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d',
+         'KH-' || left(v_d1, 4) || '-' || right(v_d1, 4));
+  perform pg_temp.pastikan(v ->> 'hasil' = 'baru', 'pindai QR pertama tercatat sebagai check-in baru');
+  perform pg_temp.pastikan(v -> 'peserta' ->> 'status' = 'checked-in', 'status peserta menjadi hadir');
+  perform pg_temp.pastikan(v -> 'peserta' ->> 'metode_check_in' = 'qr', 'cara check-in tercatat pindai QR');
+
+  v := public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d', v_d1, 'kode');
+  perform pg_temp.pastikan(v ->> 'hasil' = 'ulang', 'tiket yang dipakai lagi dikenali sebagai pindai ulang');
+  perform pg_temp.pastikan(v -> 'peserta' ->> 'metode_check_in' = 'qr', 'pindai ulang tidak menimpa catatan pertama');
+
+  v := public.check_in_manual('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000011');
+  perform pg_temp.pastikan(v ->> 'hasil' = 'ulang', 'check-in manual untuk peserta yang sudah hadir juga dikenali');
+
+  v := public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d',
+         lower('kh ' || left(v_d2, 4) || '-' || right(v_d2, 4)), 'kode');
+  perform pg_temp.pastikan(v ->> 'hasil' = 'baru', 'kode yang diketik huruf kecil dan bertanda hubung diterima');
+  perform pg_temp.pastikan(v -> 'peserta' ->> 'metode_check_in' = 'kode', 'cara check-in tercatat ketik kode');
+end $$;
+
+select pg_temp.pastikan_ditolak(
+  $$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d',
+      'e0000000-0000-4000-8000-00000000000d_c0000000-0000-4000-8000-000000000012')$$,
+  'Kode tiket tidak dikenali', 'QR lama berisi id event dan id pengguna tidak diterima lagi');
+select pg_temp.pastikan_ditolak(
+  $$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d', 'bukan kode')$$,
+  'Kode tiket tidak dikenali', 'teks sembarang ditolak');
+select pg_temp.pastikan_ditolak(
+  format($$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000d', %L)$$, current_setting('uji.kode_f1')),
+  'untuk event lain', 'tiket event lain ditolak');
+select pg_temp.pastikan_ditolak(
+  $$select public.check_in_manual('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000013')$$,
+  'daftar tunggu', 'peserta daftar tunggu belum bisa check-in');
+select pg_temp.pastikan_ditolak(
+  $$select public.check_in_manual('e0000000-0000-4000-8000-00000000000d', 'c0000000-0000-4000-8000-000000000099')$$,
+  'tidak terdaftar', 'orang yang tidak mendaftar tidak bisa di-check-in');
+
+-- Jendela waktu.
+select pg_temp.pastikan_ditolak(
+  format($$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000e', %L)$$, current_setting('uji.kode_e1')),
+  'baru dibuka 2 jam sebelum', 'pindai sebelum jendela check-in dibuka ditolak');
+select pg_temp.pastikan_ditolak(
+  $$select public.check_in_manual('e0000000-0000-4000-8000-00000000000e', 'c0000000-0000-4000-8000-000000000011')$$,
+  'baru dibuka 2 jam sebelum', 'check-in manual sebelum jendela dibuka juga ditolak');
+select pg_temp.pastikan_ditolak(
+  format($$select public.check_in_rsvp('e0000000-0000-4000-8000-00000000000f', %L)$$, current_setting('uji.kode_f1')),
+  'Pindai tiket sudah ditutup', 'pindai lebih dari 1 jam setelah acara selesai ditolak');
+select pg_temp.pastikan(
+  public.check_in_manual('e0000000-0000-4000-8000-00000000000f', 'c0000000-0000-4000-8000-000000000011')
+    -> 'peserta' ->> 'metode_check_in' = 'manual',
+  'check-in manual tetap bisa setelah acara selesai');
+
+select pg_temp.masuk_sebagai('c0000000-0000-4000-8000-000000000099');
+select pg_temp.pastikan(
+  public.check_in_manual('e0000000-0000-4000-8000-00000000000f', 'c0000000-0000-4000-8000-000000000012') ->> 'hasil' = 'baru',
+  'admin bisa check-in manual di event mana pun');
+
+select pg_temp.keluar();
+select pg_temp.pastikan(
+  (select count(*) from public.rsvps
+    where event_id = 'e0000000-0000-4000-8000-00000000000d' and status = 'checked-in') = 2,
+  'di event D tepat dua peserta tercatat hadir');
+
+-- Pembatalan oleh peserta.
+select pg_temp.masuk_sebagai('c0000000-0000-4000-8000-000000000011');
+select pg_temp.pastikan_ditolak(
+  $$select public.cancel_rsvp('e0000000-0000-4000-8000-00000000000d')$$,
+  'sudah tercatat hadir', 'peserta yang sudah check-in tidak bisa membatalkan pendaftaran');
+select pg_temp.pastikan_ditolak(
+  $$select public.cancel_rsvp('e0000000-0000-4000-8000-00000000000f')$$,
+  'sudah selesai', 'pendaftaran event yang sudah selesai tidak bisa dibatalkan');
+select public.cancel_rsvp('e0000000-0000-4000-8000-00000000000e');
+select pg_temp.pastikan(
+  pg_temp.terlihat($$select count(*) from public.rsvps where event_id = 'e0000000-0000-4000-8000-00000000000e'$$) = 0,
+  'pendaftaran event yang belum mulai tetap bisa dibatalkan');
+
+select pg_temp.keluar();
+select pg_temp.pastikan(
+  (select count(*) from public.rsvps
+    where event_id = 'e0000000-0000-4000-8000-00000000000d' and status = 'checked-in') = 2,
+  'penolakan pembatalan tidak menghapus catatan hadir');
 
 rollback;
