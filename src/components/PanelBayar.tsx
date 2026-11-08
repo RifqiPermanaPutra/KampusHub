@@ -7,7 +7,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { CreditCard } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Event, Pembayaran } from '../types';
-import { formatRupiah, kuotaBerbayarHabis, pembayaranMasihBerlaku } from '../lib/pembayaran';
+import {
+  BATAS_BAYAR_MENIT,
+  formatRupiah,
+  kuotaBerbayarHabis,
+  pembayaranMasihBerlaku,
+  sisaWaktuBayar,
+} from '../lib/pembayaran';
 import { bayarDenganSnap, midtransSiap } from '../lib/midtrans';
 import { pembayaranService } from '../services/pembayaranService';
 
@@ -49,6 +55,17 @@ export function PanelBayar({
   useEffect(() => {
     void muatPembayaran();
   }, [muatPembayaran]);
+
+  // Jam untuk hitung mundur. Hanya berdetak selama ada transaksi yang belum
+  // dibayar; begitu batas bayar lewat, panel otomatis kembali ke tombol Bayar.
+  const [sekarang, setSekarang] = useState(() => Date.now());
+  const adaTagihan = pembayaran?.status === 'menunggu';
+  useEffect(() => {
+    if (!adaTagihan) return;
+    setSekarang(Date.now());
+    const jamDetik = window.setInterval(() => setSekarang(Date.now()), 1000);
+    return () => window.clearInterval(jamDetik);
+  }, [adaTagihan]);
 
   // Apa pun cara jendela Midtrans ditutup, status sebenarnya ditanyakan ke
   // server. Hasil dari jendela itu hanya petunjuk, bukan bukti lunas.
@@ -125,16 +142,32 @@ export function PanelBayar({
     );
   }
 
-  const menunggu = pembayaran !== null && pembayaranMasihBerlaku(pembayaran);
+  const menunggu = pembayaran !== null && pembayaranMasihBerlaku(pembayaran, sekarang);
+  // Transaksi terakhir belum dibayar tetapi batasnya sudah lewat: kursinya sudah dilepas.
+  const waktuHabis = adaTagihan && !menunggu;
   const habis = !menunggu && kuotaBerbayarHabis(event);
   const harga = formatRupiah(event.harga ?? 0);
 
   return (
     <div className="space-y-3">
       {menunggu && pembayaran && (
-        <p className="mading-note text-sm" role="status">
-          Menunggu pembayaran {formatRupiah(pembayaran.jumlah)}. Kursi Anda ditahan sampai pukul{' '}
-          {jam(pembayaran.batasBayar)} WIB.
+        <div className="mading-note text-sm" role="status">
+          <p>
+            Menunggu pembayaran {formatRupiah(pembayaran.jumlah)}. Kursi Anda ditahan sampai pukul{' '}
+            {jam(pembayaran.batasBayar)} WIB.
+          </p>
+          <p className="mt-1">
+            Sisa waktu bayar:{' '}
+            <span className="font-mono font-bold text-base tabular-nums" aria-live="off">
+              {sisaWaktuBayar(pembayaran.batasBayar, sekarang)}
+            </span>
+          </p>
+        </div>
+      )}
+
+      {waktuHabis && (
+        <p className="mading-alert text-sm" role="status">
+          Waktu pembayaran habis dan kursi sudah dilepas. Tekan Bayar & Daftar untuk mencoba lagi.
         </p>
       )}
 
@@ -177,7 +210,7 @@ export function PanelBayar({
         <p className="text-xs text-ink/70 text-center">
           Harga sama untuk semua metode ({harga}): QRIS, GoPay, transfer bank, atau e-wallet lain. Setelah
           dipilih di jendela Midtrans, metode terkunci, tetapi bisa diganti lewat tombol Ganti Metode
-          Pembayaran. Kursi ditahan 30 menit selama pembayaran, dan pendaftaran tidak bisa dibatalkan
+          Pembayaran. Kursi ditahan {BATAS_BAYAR_MENIT} menit selama pembayaran, dan pendaftaran tidak bisa dibatalkan
           setelah lunas.
         </p>
       )}

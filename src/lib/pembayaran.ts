@@ -17,7 +17,18 @@ import { Event, Pembayaran, StatusPembayaran } from '../types';
  */
 
 export const HARGA_MINIMAL = 1000;
-export const BATAS_BAYAR_MENIT = 30;
+/** Harus sama dengan siapkan_pembayaran (migrasi 15) dan Edge Function pembayaran. */
+export const BATAS_BAYAR_MENIT = 15;
+
+/**
+ * Sisa waktu sampai batas bayar dalam format mm:ss, misalnya "07:42".
+ * Tidak pernah negatif: waktu yang sudah lewat menjadi "00:00".
+ */
+export function sisaWaktuBayar(batasBayar: string, now: number = Date.now()): string {
+  const detik = Math.max(0, Math.ceil((new Date(batasBayar).getTime() - now) / 1000));
+  const menit = Math.floor(detik / 60);
+  return `${String(menit).padStart(2, '0')}:${String(detik % 60).padStart(2, '0')}`;
+}
 
 export function formatRupiah(jumlah: number): string {
   return `Rp ${jumlah.toLocaleString('id-ID')}`;

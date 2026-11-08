@@ -19,7 +19,9 @@ const SNAP_URL = PRODUKSI
   ? 'https://app.midtrans.com/snap/v1/transactions'
   : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 const STATUS_URL = PRODUKSI ? 'https://api.midtrans.com/v2' : 'https://api.sandbox.midtrans.com/v2';
-const BATAS_BAYAR_MENIT = 30;
+// Harus sama dengan interval di siapkan_pembayaran (migrasi 15) dan
+// BATAS_BAYAR_MENIT di src/lib/pembayaran.ts.
+const BATAS_BAYAR_MENIT = 15;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -77,7 +79,7 @@ async function buat(server: SupabaseClient, userId: string, eventId: string, ser
   const hasil = await respons.json().catch(() => ({}));
 
   if (!respons.ok || !hasil.token) {
-    // Lepas tahanan kursinya supaya tidak menggantung selama 30 menit.
+    // Lepas tahanan kursinya supaya tidak menggantung sampai batas bayar.
     await server.rpc('konfirmasi_pembayaran', {
       p_order_id: data.orderId,
       p_status: 'gagal',

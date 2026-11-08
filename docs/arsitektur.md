@@ -207,7 +207,7 @@ erDiagram
         text status "menunggu, lunas, gagal, kedaluwarsa"
         text snap_token
         text metode
-        timestamptz batas_bayar "kursi ditahan 30 menit"
+        timestamptz batas_bayar "kursi ditahan 15 menit"
         timestamptz dibayar_pada
     }
 
@@ -311,7 +311,7 @@ erDiagram
 | `normalisasi_kode_tiket` | Aplikasi | Mengubah `kh-7f3k-9q2m` atau `KH7F3K9Q2M` menjadi kode baku. |
 | `verifikasi_sertifikat` | Siapa saja, tanpa login | Hanya mengembalikan data yang tercetak di sertifikat. Dibatasi 30 permintaan per menit per IP. |
 | `ringkasan_sertifikat`, `simpan_pengaturan_sertifikat`, `sinkronkan_peserta_sertifikat`, `setujui_sertifikat`, `ambil_antrean_sertifikat`, `catat_hasil_sertifikat`, `ulangi_sertifikat_gagal`, `buat_ulang_sertifikat`, `terbitkan_sertifikat`, `terbitkan_ulang_sertifikat` | Penyelenggara, admin | Alur sertifikat per event. Nomor sertifikat dibagikan database di bawah kunci baris event, sehingga tidak ada nomor ganda. |
-| `siapkan_pembayaran`, `simpan_token_pembayaran`, `konfirmasi_pembayaran` | Edge Function (service_role) | Menahan kursi 30 menit, menyimpan token Snap, lalu menandai lunas dan menerbitkan pendaftaran. Tidak bisa dipanggil dari browser. |
+| `siapkan_pembayaran`, `simpan_token_pembayaran`, `konfirmasi_pembayaran` | Edge Function (service_role) | Menahan kursi 15 menit, menyimpan token Snap, lalu menandai lunas dan menerbitkan pendaftaran. Tidak bisa dipanggil dari browser. |
 | `putuskan_event` | Admin | Hanya event yang belum diputuskan. Penolakan wajib disertai alasan minimal 10 karakter. |
 | `ajukan_ulang_event` | Penyelenggara | Hanya event berstatus ditolak, dan hanya oleh penyelenggaranya. |
 | `putuskan_panitia` | Admin | Pengguna harus sedang mengajukan diri, dan hanya mahasiswa UIR yang boleh jadi panitia. |
@@ -411,7 +411,7 @@ flowchart TD
     D -->|"Ya, kuota ada"| F["Status registered<br/>dan kode tiket acak"]
     D -->|"Ya, kuota penuh"| G["Status waitlist"]
     G -->|"Ada yang batal atau kuota ditambah"| F
-    B -->|"Ya"| P["Bayar & Daftar lewat Midtrans,<br/>kursi ditahan 30 menit"]
+    B -->|"Ya"| P["Bayar & Daftar lewat Midtrans,<br/>kursi ditahan 15 menit"]
     P -->|"Lunas"| F
     P -->|"Kedaluwarsa atau gagal"| PX["Kursi dilepas"]
     F --> H["E-tiket: QR dan kode KH-XXXX-XXXX,<br/>bisa disimpan sebagai gambar"]
@@ -484,7 +484,7 @@ sequenceDiagram
 
     M->>A: Bayar & Daftar
     A->>E: Mulai pembayaran (dengan JWT)
-    E->>D: siapkan_pembayaran: kunci event, periksa syarat, tahan kursi 30 menit
+    E->>D: siapkan_pembayaran: kunci event, periksa syarat, tahan kursi 15 menit
     E->>S: Minta token Snap (server key)
     S-->>E: Token
     E-->>A: Token, jendela Snap dibuka

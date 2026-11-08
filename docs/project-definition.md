@@ -106,7 +106,7 @@ transaksional dan Row Level Security, bukan hanya di browser. Rincian arsitektur
 |---|---|---|
 | FI-1 | Akun dan peran | Daftar dengan email atau Google sebagai mahasiswa UIR atau peserta umum, lupa kata sandi, lengkapi profil, pengajuan panitia, pengaturan peran oleh admin |
 | FI-2 | Publikasi dan moderasi event | Panitia membuat event dengan waktu mulai dan selesai, kuota, harga, pilihan terbuka untuk umum, dan poster; admin menyetujui atau menolak dengan alasan; panitia memperbaiki lalu mengajukan ulang |
-| FI-3 | Pendaftaran dan pembayaran | Ringkasan sebelum mendaftar, kuota, batas waktu, daftar tunggu yang naik otomatis, event berbayar lewat Midtrans dengan kursi ditahan 30 menit, serta aturan pembatalan |
+| FI-3 | Pendaftaran dan pembayaran | Ringkasan sebelum mendaftar, kuota, batas waktu, daftar tunggu yang naik otomatis, event berbayar lewat Midtrans dengan kursi ditahan 15 menit, serta aturan pembatalan |
 | FI-4 | E-tiket, check-in, dan sertifikat | E-tiket berisi QR dan kode acak yang bisa diketik dan disimpan sebagai gambar; check-in dengan jendela waktu lewat pindai, ketik kode, atau manual; sertifikat dari template PDF panitia yang diterbitkan ke peserta dan bisa diverifikasi tanpa login |
 | FI-5 | Notifikasi dan analitik | Notifikasi realtime dari database, pengingat H-1, analitik peserta per event, pendapatan tiket, ekspor CSV, laporan PDF, ringkasan kampus |
 
@@ -182,7 +182,7 @@ event dengan AI Gemini. Fitur AI bersifat opsional dan tidak aktif selama kunci 
 | FR-24 | Sistem harus dapat mengekspor daftar peserta ke CSV dan laporan event ke PDF. | Panitia, Admin | `EventDetail.tsx`, `event-report.ts` |
 | FR-25 | Sistem harus menampilkan ringkasan analitik seluruh kampus hanya kepada admin. | Admin | `campus_analytics()` |
 | FR-26 | Sistem harus dapat menyimpan event ke daftar simpanan pengguna. | Peserta | `savedService.ts` |
-| FR-27 | Sistem harus menerima pembayaran event berbayar lewat Midtrans (QRIS, transfer bank, e-wallet), menahan kursi selama 30 menit, menerbitkan pendaftaran setelah lunas, dan menampilkan pembayaran yang belum selesai serta bukti bayar di halaman tiket. | Peserta | `PanelBayar.tsx`, `pembayaranService.ts`, Edge Function `pembayaran` dan `notifikasi-midtrans`, `siapkan_pembayaran()`, `konfirmasi_pembayaran()` |
+| FR-27 | Sistem harus menerima pembayaran event berbayar lewat Midtrans (QRIS, transfer bank, e-wallet), menahan kursi selama 15 menit, menerbitkan pendaftaran setelah lunas, dan menampilkan pembayaran yang belum selesai serta bukti bayar di halaman tiket. | Peserta | `PanelBayar.tsx`, `pembayaranService.ts`, Edge Function `pembayaran` dan `notifikasi-midtrans`, `siapkan_pembayaran()`, `konfirmasi_pembayaran()` |
 | FR-28 | Sistem harus menolak pembatalan pendaftaran untuk event berbayar yang sudah lunas, event yang sudah selesai, dan peserta yang sudah check-in. | Peserta | `cancel_rsvp()`, `registration.ts` |
 | FR-29 | Sistem harus mengunci harga event setelah ada yang membayar, dan menolak penghapusan event yang punya pembayaran lunas atau sudah selesai dengan peserta. | Panitia, Admin | trigger `jaga_harga_event` dan `jaga_hapus_event_berbayar`, `arsip.ts` |
 | FR-30 | Sistem harus menyembunyikan event dari Beranda, Jelajah, dan Disimpan 3 hari setelah selesai tanpa menghapus datanya, dan tetap menampilkannya di riwayat tiket peserta serta dasbor panitia. | Semua | `arsip.ts`, `eventService.ts`, `MyRSVPs.tsx`, `Dashboard.tsx` |
@@ -223,7 +223,7 @@ tentang uang dan pendaftaran diambil di server. Urutan teknisnya ada di
 1. Peserta menekan **Bayar & Daftar** di halaman event berbayar.
 2. Edge Function `pembayaran` memeriksa siapa yang sedang masuk, lalu memanggil
    `siapkan_pembayaran()`. Fungsi ini mengunci baris event, memeriksa semua syarat, dan menahan
-   satu kursi selama 30 menit.
+   satu kursi selama 15 menit.
 3. Edge Function meminta token ke Midtrans memakai server key, lalu browser membuka jendela
    pembayaran Midtrans (QRIS, transfer bank, atau e-wallet). Data kartu dan rekening tidak pernah
    melewati aplikasi.
@@ -236,10 +236,10 @@ tentang uang dan pendaftaran diambil di server. Urutan teknisnya ada di
 
 ```mermaid
 stateDiagram-v2
-    [*] --> menunggu: peserta menekan Bayar, kursi ditahan 30 menit
+    [*] --> menunggu: peserta menekan Bayar, kursi ditahan 15 menit
     menunggu --> lunas: Midtrans melaporkan pembayaran berhasil
     menunggu --> gagal: ditolak atau dibatalkan
-    menunggu --> kedaluwarsa: lewat 30 menit tanpa pembayaran
+    menunggu --> kedaluwarsa: lewat 15 menit tanpa pembayaran
     kedaluwarsa --> lunas: pembayaran masuk terlambat
     lunas --> [*]: pendaftaran dan e-tiket terbit
     gagal --> [*]: kursi dilepas

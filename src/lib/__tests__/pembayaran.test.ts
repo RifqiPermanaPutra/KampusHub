@@ -8,6 +8,7 @@ import {
   labelMetodeBayar,
   pembayaranMasihBerlaku,
   ringkasPendapatan,
+  sisaWaktuBayar,
   statusDariMidtrans,
   teksTandaTangan,
   validasiHarga,
@@ -134,5 +135,25 @@ describe('ringkasPendapatan', () => {
       { status: 'menunggu', jumlah: 25000 },
       { status: 'gagal', jumlah: 25000 },
     ])).toEqual({ total: 50000, lunas: 2 });
+  });
+});
+
+describe('sisaWaktuBayar', () => {
+  const batas = '2026-11-09T10:15:00.000Z';
+  const pada = (iso: string) => new Date(iso).getTime();
+
+  it('menampilkan menit dan detik dengan dua digit', () => {
+    expect(sisaWaktuBayar(batas, pada('2026-11-09T10:00:00.000Z'))).toBe('15:00');
+    expect(sisaWaktuBayar(batas, pada('2026-11-09T10:07:18.000Z'))).toBe('07:42');
+    expect(sisaWaktuBayar(batas, pada('2026-11-09T10:14:51.000Z'))).toBe('00:09');
+  });
+
+  it('membulatkan sisa pecahan detik ke atas', () => {
+    expect(sisaWaktuBayar(batas, pada('2026-11-09T10:14:59.400Z'))).toBe('00:01');
+  });
+
+  it('tidak pernah negatif setelah batas lewat', () => {
+    expect(sisaWaktuBayar(batas, pada('2026-11-09T10:15:00.000Z'))).toBe('00:00');
+    expect(sisaWaktuBayar(batas, pada('2026-11-09T11:00:00.000Z'))).toBe('00:00');
   });
 });
