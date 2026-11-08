@@ -2,12 +2,19 @@
 //
 // Dipasang dengan nama "notifikasi-midtrans" dan "Verify JWT" DIMATIKAN,
 // karena Midtrans tidak membawa token Supabase. Keaslian kabarnya dijamin
-// signature_key yang diperiksa di bawah memakai server key.
+// signature_key yang diperiksa di bawah.
 //
 // Alamatnya diisi di dasbor Midtrans > Settings > Payment > Notification URL:
 //   https://<id-proyek>.supabase.co/functions/v1/notifikasi-midtrans
 //
-// Rahasia yang dipakai sama dengan fungsi "pembayaran": MIDTRANS_SERVER_KEY.
+// Rahasia di Dashboard > Edge Functions > Secrets:
+//   MIDTRANS_SIGNATURE_KEY  "Signature Secret Key" dari dasbor Midtrans >
+//                           Settings > Access Keys. Akun Midtrans dengan
+//                           pengelolaan key baru (beberapa server key)
+//                           menandatangani notifikasi dengan kunci ini,
+//                           bukan dengan server key.
+//   MIDTRANS_SERVER_KEY     dipakai kalau MIDTRANS_SIGNATURE_KEY kosong
+//                           (akun lama: tanda tangan memakai server key).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -28,8 +35,14 @@ async function sha512(teks: string): Promise<string> {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('ok');
 
-  const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
-  if (!serverKey) return new Response('MIDTRANS_SERVER_KEY belum diisi', { status: 500 });
+  // Spasi atau baris baru yang ikut tersalin saat mengisi secret membuat
+  // tanda tangan selalu tidak cocok, jadi dibuang lebih dulu.
+  const kunciSignature = (Deno.env.get('MIDTRANS_SIGNATURE_KEY') ?? '').trim();
+  const sumberKunci = kunciSignature ? 'MIDTRANS_SIGNATURE_KEY' : 'MIDTRANS_SERVER_KEY';
+  const kunciTandaTangan = kunciSignature || (Deno.env.get('MIDTRANS_SERVER_KEY') ?? '').trim();
+  if (!kunciTandaTangan) {
+    return new Response('MIDTRANS_SIGNATURE_KEY atau MIDTRANS_SERVER_KEY belum diisi', { status: 500 });
+  }
 
   let kabar: Record<string, string>;
   try {
@@ -42,8 +55,12 @@ Deno.serve(async (req) => {
   if (!order_id || !signature_key) return new Response('isi tidak lengkap', { status: 400 });
 
   // Urutan rangkaiannya harus sama dengan teksTandaTangan di src/lib/pembayaran.ts.
-  const harapan = await sha512(`${order_id}${status_code}${gross_amount}${serverKey}`);
-  if (harapan !== signature_key) return new Response('tanda tangan tidak cocok', { status: 403 });
+  const harapan = await sha512(`${order_id}${status_code}${gross_amount}${kunciTandaTangan}`);
+  if (harapan !== signature_key) {
+    // Petunjuk untuk log tanpa membocorkan kuncinya.
+    console.warn('Tanda tangan Midtrans tidak cocok', JSON.stringify({ order_id, status_code, sumber_kunci: sumberKunci }));
+    return new Response('tanda tangan tidak cocok', { status: 403 });
+  }
 
   // Transaksi dari aplikasi lain yang memakai akun Midtrans yang sama diabaikan.
   if (!order_id.startsWith('KH-')) return new Response('ok');

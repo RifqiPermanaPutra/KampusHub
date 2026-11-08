@@ -70,6 +70,10 @@ Event berbayar dibayar lewat Midtrans Snap. Langkah menyiapkannya dalam mode san
 2. Isi `VITE_MIDTRANS_CLIENT_KEY` di `.env.local` dengan Client Key.
 3. Di Supabase **Edge Functions → Secrets**, tambahkan `MIDTRANS_SERVER_KEY` berisi Server Key.
    Server Key tidak boleh ditaruh di `.env.local` atau di kode aplikasi.
+   Kalau halaman Access Keys juga menampilkan **Signature Secret Key** (akun dengan beberapa
+   server key), tambahkan secret `MIDTRANS_SIGNATURE_KEY` berisi kunci itu. Midtrans
+   menandatangani notifikasi dengan kunci tersebut, bukan dengan server key; tanpanya
+   notifikasi ditolak (403) dan e-tiket baru terbit setelah peserta menekan Cek Status.
 4. Pasang dua Edge Function dari folder `supabase/functions/`:
    - `pembayaran`, dengan **Verify JWT** menyala.
    - `notifikasi-midtrans`, dengan **Verify JWT** dimatikan.
