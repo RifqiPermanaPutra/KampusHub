@@ -54,6 +54,17 @@ export const pembayaranService = {
     return (data as { status: StatusPembayaran }).status;
   },
 
+  /**
+   * Mengganti metode pembayaran: order lama diakhiri dan order baru dibuat.
+   * Mengembalikan token baru, atau status kalau order lama ternyata sudah
+   * selesai (misalnya sudah dibayar).
+   */
+  async ganti(orderId: string): Promise<{ token: string; orderId: string } | { status: StatusPembayaran }> {
+    const { data, error } = await supabase.functions.invoke(FUNGSI, { body: { aksi: 'ganti', orderId } });
+    if (error) throw new Error(await pesanFungsi(error));
+    return data as { token: string; orderId: string } | { status: StatusPembayaran };
+  },
+
   /** Transaksi terbaru milik pengguna untuk sebuah event, atau null. */
   async milikSaya(eventId: string, userId: string): Promise<Pembayaran | null> {
     try {

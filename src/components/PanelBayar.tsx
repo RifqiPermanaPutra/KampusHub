@@ -81,6 +81,28 @@ export function PanelBayar({
     }
   };
 
+  const gantiMetode = async () => {
+    if (!pembayaran) return;
+    setMemproses(true);
+    setPesan('');
+    try {
+      const hasil = await pembayaranService.ganti(pembayaran.orderId);
+      await muatPembayaran();
+      if ('token' in hasil) {
+        await bayarDenganSnap(hasil.token);
+        await periksa(hasil.orderId);
+      } else if (hasil.status === 'lunas') {
+        await onLunas();
+      } else {
+        setPesan('Transaksi sebelumnya sudah berakhir. Tekan Bayar & Daftar untuk memulai lagi.');
+      }
+    } catch (err) {
+      setPesan(err instanceof Error ? err.message : 'Gagal mengganti metode pembayaran. Coba lagi.');
+    } finally {
+      setMemproses(false);
+    }
+  };
+
   const cekStatus = async () => {
     if (!pembayaran) return;
     setMemproses(true);
@@ -134,15 +156,29 @@ export function PanelBayar({
       </Button>
 
       {menunggu && (
-        <Button variant="outline" className="w-full" onClick={cekStatus} disabled={memproses}>
-          Cek Status Pembayaran
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Button variant="outline" className="w-full" onClick={gantiMetode} disabled={memproses || !midtransSiap}>
+            Ganti Metode Pembayaran
+          </Button>
+          <Button variant="outline" className="w-full" onClick={cekStatus} disabled={memproses}>
+            Cek Status Pembayaran
+          </Button>
+        </div>
+      )}
+
+      {menunggu && (
+        <p className="text-xs text-ink/70 text-center">
+          Sudah memilih metode tapi ingin memakai yang lain? Tekan Ganti Metode Pembayaran. Tagihan
+          sebelumnya dibatalkan dan nominalnya tetap {harga}.
+        </p>
       )}
 
       {!menunggu && !ditutup && !habis && midtransSiap && (
         <p className="text-xs text-ink/70 text-center">
-          Dibayar lewat Midtrans: QRIS, transfer bank, atau e-wallet. Kursi ditahan 30 menit selama
-          pembayaran, dan pendaftaran tidak bisa dibatalkan setelah lunas.
+          Harga sama untuk semua metode ({harga}): QRIS, GoPay, transfer bank, atau e-wallet lain. Setelah
+          dipilih di jendela Midtrans, metode terkunci, tetapi bisa diganti lewat tombol Ganti Metode
+          Pembayaran. Kursi ditahan 30 menit selama pembayaran, dan pendaftaran tidak bisa dibatalkan
+          setelah lunas.
         </p>
       )}
 

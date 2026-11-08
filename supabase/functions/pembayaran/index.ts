@@ -122,6 +122,80 @@ async function cek(server: SupabaseClient, userId: string, orderId: string, serv
   return jawab({ status: data });
 }
 
+interface StatusMidtrans {
+  ditemukan: boolean;
+  status: 'lunas' | 'gagal' | 'kedaluwarsa' | null;
+  metode: string | null;
+  jumlah: number;
+}
+
+async function tanyaStatus(orderId: string, serverKey: string): Promise<StatusMidtrans> {
+  const respons = await fetch(`${STATUS_URL}/${encodeURIComponent(orderId)}/status`, {
+    headers: { Accept: 'application/json', Authorization: otorisasiMidtrans(serverKey) },
+  });
+  const hasil = await respons.json().catch(() => ({}));
+  // Midtrans menjawab 404 (di status HTTP atau di isi) kalau peserta belum memilih metode.
+  const ditemukan = respons.status !== 404 && hasil.status_code !== '404';
+  return {
+    ditemukan,
+    status: ditemukan ? statusDariMidtrans(hasil.transaction_status, hasil.fraud_status) : null,
+    metode: hasil.payment_type ?? null,
+    jumlah: Math.round(Number(hasil.gross_amount)),
+  };
+}
+
+// Midtrans mengunci order pada metode pertama yang dipilih peserta. Untuk
+// berganti metode, order lama diakhiri di Midtrans (supaya tagihan lamanya
+// tidak bisa dibayar lagi), dilepas di database, lalu dibuat order baru.
+async function ganti(server: SupabaseClient, userId: string, orderId: string, serverKey: string): Promise<Response> {
+  const { data: bayar } = await server
+    .from('pembayaran')
+    .select('user_id, event_id, status, snap_token')
+    .eq('order_id', orderId)
+    .maybeSingle();
+  if (!bayar || bayar.user_id !== userId) return jawab({ error: 'Transaksi tidak ditemukan.' }, 404);
+  if (bayar.status !== 'menunggu') return jawab({ status: bayar.status });
+
+  let info = await tanyaStatus(orderId, serverKey);
+
+  // Belum ada metode yang dipilih: jendela yang sama masih menampilkan semua metode.
+  if (!info.ditemukan && bayar.snap_token) return jawab({ token: bayar.snap_token, orderId });
+
+  if (info.ditemukan && info.status === null) {
+    // Masih menunggu dibayar: akhiri di Midtrans, lalu pastikan hasilnya.
+    await fetch(`${STATUS_URL}/${encodeURIComponent(orderId)}/expire`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', Authorization: otorisasiMidtrans(serverKey) },
+    });
+    info = await tanyaStatus(orderId, serverKey);
+    if (info.status === null) {
+      return jawab({ error: 'Metode pembayaran belum bisa diganti. Tunggu sebentar, lalu coba lagi.' }, 409);
+    }
+  }
+
+  // Peserta ternyata sudah membayar order lama: catat lunas, jangan buat tagihan kedua.
+  if (info.status === 'lunas') {
+    const { data, error } = await server.rpc('konfirmasi_pembayaran', {
+      p_order_id: orderId,
+      p_status: 'lunas',
+      p_metode: info.metode,
+      p_jumlah: info.jumlah,
+    });
+    if (error) return jawab({ error: error.message }, 400);
+    return jawab({ status: data });
+  }
+
+  const { error } = await server.rpc('konfirmasi_pembayaran', {
+    p_order_id: orderId,
+    p_status: info.status ?? 'gagal',
+    p_metode: info.metode,
+    p_jumlah: null,
+  });
+  if (error) return jawab({ error: error.message }, 400);
+
+  return buat(server, userId, bayar.event_id, serverKey);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return jawab({ error: 'Metode tidak didukung.' }, 405);
@@ -148,5 +222,6 @@ Deno.serve(async (req) => {
   const server = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   if (isi.aksi === 'buat' && isi.eventId) return buat(server, user.id, isi.eventId, serverKey);
   if (isi.aksi === 'cek' && isi.orderId) return cek(server, user.id, isi.orderId, serverKey);
+  if (isi.aksi === 'ganti' && isi.orderId) return ganti(server, user.id, isi.orderId, serverKey);
   return jawab({ error: 'Aksi tidak dikenal.' }, 400);
 });
