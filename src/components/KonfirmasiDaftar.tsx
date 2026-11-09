@@ -4,12 +4,10 @@
  */
 
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
-import { id as localeId } from 'date-fns/locale';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Event, UserProfile } from '../types';
-import { rentangEvent } from '../lib/event-phase';
+import { labelJadwal } from '../lib/jadwal';
 import { keteranganPeserta } from '../lib/peserta';
 
 /**
@@ -33,12 +31,7 @@ export function KonfirmasiDaftar({
   onBatal: () => void;
   onYakin: () => void;
 }) {
-  const { start, end } = rentangEvent(event);
-  const mulai = new Date(start);
-  const selesai = new Date(end);
-  const jadwal = mulai.toDateString() === selesai.toDateString()
-    ? `${format(mulai, 'EEEE, d MMMM yyyy · HH.mm', { locale: localeId })} sampai ${format(selesai, 'HH.mm')} WIB`
-    : `${format(mulai, 'd MMM yyyy · HH.mm', { locale: localeId })} sampai ${format(selesai, 'd MMM yyyy · HH.mm', { locale: localeId })} WIB`;
+  const jadwal = labelJadwal(event);
 
   return (
     <Modal onClose={onBatal} label="Ringkasan pendaftaran" className="max-w-md">

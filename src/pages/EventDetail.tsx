@@ -142,6 +142,8 @@ export function EventDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDaftarModal, setShowDaftarModal] = useState(false);
+  // Ringkasan pesanan event berbayar; bisa dibuka dari panel bayar maupun bar Daftar di ponsel.
+  const [showBayarModal, setShowBayarModal] = useState(false);
   const [actionError, setActionError] = useState('');
   const [commentError, setCommentError] = useState('');
   // Cap "Terdaftar" yang muncul sesaat setelah pendaftaran berhasil.
@@ -445,13 +447,12 @@ export function EventDetail() {
 
   /*
    * Bar daftar di bawah layar ponsel, seperti tombol Beli di situs tiket.
-   * Hanya untuk yang belum terdaftar dan masih bisa mendaftar. Event gratis
-   * langsung membuka ringkasan pendaftaran; event berbayar menggulir ke panel
-   * bayar, karena alur Midtrans ada di sana.
+   * Hanya untuk yang belum terdaftar dan masih bisa mendaftar. Keduanya
+   * membuka ringkasan lebih dulu: event gratis ringkasan pendaftaran, event
+   * berbayar ringkasan pesanan sebelum jendela Midtrans.
    */
   const bolehBarDaftar = event.status === 'approved' && !myRsvp && !registrationClosed && halangan === null && Boolean(profile);
   const tampilBarDaftar = bolehBarDaftar && kartuLewat;
-  const keKartuDaftar = () => kartuDaftarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   /*
    * Tiga bagian dalam satu grid. Di ponsel urutannya: info utama, kartu
@@ -627,7 +628,9 @@ export function EventDetail() {
           {berbayar && profile ? (
             <PanelBayar
               event={event}
-              userId={profile.uid}
+              profil={profile}
+              konfirmasiTerbuka={showBayarModal}
+              onKonfirmasiTerbuka={setShowBayarModal}
               terdaftar={Boolean(myRsvp)}
               ditutup={registrationClosed}
               labelDitutup={registrationButtonLabel(regState)}
@@ -884,10 +887,10 @@ export function EventDetail() {
             </div>
             <Button
               variant={isFull && !berbayar ? 'stabilo' : 'primary'}
-              onClick={berbayar ? keKartuDaftar : () => setShowDaftarModal(true)}
+              onClick={() => (berbayar ? setShowBayarModal(true) : setShowDaftarModal(true))}
               loading={actionLoading}
             >
-              {berbayar ? 'Bayar & Daftar' : isFull ? 'Ikut Antre' : 'Daftar'}
+              {!berbayar && isFull ? 'Ikut Antre' : 'Daftar'}
             </Button>
           </div>
         </div>

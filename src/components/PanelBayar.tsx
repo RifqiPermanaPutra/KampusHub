@@ -4,12 +4,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { CreditCard } from 'lucide-react';
 import { Button } from './ui/Button';
-import { Event, Pembayaran } from '../types';
+import { KonfirmasiBayar } from './KonfirmasiBayar';
+import { Event, Pembayaran, UserProfile } from '../types';
 import {
-  BATAS_BAYAR_MENIT,
   formatRupiah,
   kuotaBerbayarHabis,
   pembayaranMasihBerlaku,
@@ -23,28 +22,39 @@ function jam(iso: string): string {
 }
 
 /**
- * Pengganti tombol Daftar untuk event berbayar. Tidak ada daftar tunggu, dan
- * pendaftaran yang sudah lunas tidak bisa dibatalkan dari sini.
+ * Pengganti tombol Daftar untuk event berbayar. Alurnya dua langkah: tombol
+ * Daftar membuka ringkasan pesanan (KonfirmasiBayar), dan baru tombol Bayar di
+ * sana yang membuat tagihan serta membuka jendela Midtrans. Tidak ada daftar
+ * tunggu, dan pendaftaran yang sudah lunas tidak bisa dibatalkan dari sini.
  */
 export function PanelBayar({
   event,
-  userId,
+  profil,
   terdaftar,
   ditutup,
   labelDitutup,
   terhalang,
+  konfirmasiTerbuka,
+  onKonfirmasiTerbuka,
   onLunas,
 }: {
   event: Event;
-  userId: string;
+  profil: UserProfile;
   /** Pengguna sudah punya pendaftaran, artinya pembayarannya lunas. */
   terdaftar: boolean;
   ditutup: boolean;
   labelDitutup: string;
   /** Ada halangan lain, misalnya event khusus mahasiswa UIR. */
   terhalang: boolean;
+  /**
+   * Ringkasan pesanan sedang terbuka. Dikendalikan halaman event supaya bar
+   * Daftar di bawah layar ponsel juga bisa membukanya.
+   */
+  konfirmasiTerbuka: boolean;
+  onKonfirmasiTerbuka: (terbuka: boolean) => void;
   onLunas: () => Promise<void> | void;
 }) {
+  const userId = profil.uid;
   const [pembayaran, setPembayaran] = useState<Pembayaran | null>(null);
   const [memproses, setMemproses] = useState(false);
   const [pesan, setPesan] = useState('');
@@ -89,6 +99,9 @@ export function PanelBayar({
     setPesan('');
     try {
       const { token, orderId } = await pembayaranService.mulai(event.id);
+      // Ringkasan ditutup sebelum jendela Midtrans terbuka di atasnya. Kalau
+      // tagihan gagal dibuat, ringkasan tetap terbuka dan galatnya tampil di sana.
+      onKonfirmasiTerbuka(false);
       await muatPembayaran();
       await bayarDenganSnap(token);
       await periksa(orderId);
@@ -112,7 +125,7 @@ export function PanelBayar({
       } else if (hasil.status === 'lunas') {
         await onLunas();
       } else {
-        setPesan('Transaksi sebelumnya sudah berakhir. Tekan Bayar & Daftar untuk memulai lagi.');
+        setPesan('Transaksi sebelumnya sudah berakhir. Tekan Daftar untuk memulai lagi.');
       }
     } catch (err) {
       setPesan(err instanceof Error ? err.message : 'Gagal mengganti metode pembayaran. Coba lagi.');
@@ -148,6 +161,12 @@ export function PanelBayar({
   const waktuHabis = adaTagihan && !menunggu;
   const habis = !menunggu && kuotaBerbayarHabis(event);
   const harga = formatRupiah(event.harga ?? 0);
+  const bolehDaftar = event.status === 'approved' && !ditutup && !terhalang && !habis && midtransSiap;
+
+  const bukaKonfirmasi = () => {
+    setPesan('');
+    onKonfirmasiTerbuka(true);
+  };
 
   return (
     <div className="space-y-3">
@@ -168,25 +187,26 @@ export function PanelBayar({
 
       {waktuHabis && (
         <p className="mading-alert text-sm" role="status">
-          Waktu pembayaran habis dan kursi sudah dilepas. Tekan Bayar & Daftar untuk mencoba lagi.
+          Waktu pembayaran habis dan kursi sudah dilepas. Tekan Daftar untuk mencoba lagi.
         </p>
       )}
 
       <Button
         className="w-full"
         size="lg"
-        onClick={bayar}
-        loading={memproses}
-        disabled={event.status !== 'approved' || ditutup || terhalang || habis || !midtransSiap}
+        // Tagihan yang masih berjalan sudah dikonfirmasi sebelumnya, jadi langsung ke Midtrans.
+        onClick={menunggu ? bayar : bukaKonfirmasi}
+        loading={memproses && !konfirmasiTerbuka}
+        disabled={!bolehDaftar}
       >
-        <CreditCard size={18} className="mr-2" />
+        {menunggu && <CreditCard size={18} className="mr-2" />}
         {ditutup
           ? labelDitutup
           : habis
             ? 'Kuota Habis'
             : menunggu
               ? 'Lanjutkan Pembayaran'
-              : `Bayar & Daftar · ${harga}`}
+              : 'Daftar'}
       </Button>
 
       {menunggu && (
@@ -207,15 +227,9 @@ export function PanelBayar({
         </p>
       )}
 
-      {!menunggu && !ditutup && !habis && midtransSiap && (
+      {!menunggu && bolehDaftar && (
         <p className="text-xs text-ink/70 text-center">
-          Harga sama untuk semua metode ({harga}): QRIS (bisa dari e-wallet atau m-banking apa pun) atau GoPay. Setelah
-          dipilih di jendela Midtrans, metode terkunci, tetapi bisa diganti lewat tombol Ganti Metode
-          Pembayaran. Kursi ditahan {BATAS_BAYAR_MENIT} menit selama pembayaran, dan pendaftaran tidak bisa dibatalkan
-          setelah lunas. Dengan membayar, Anda menyetujui{' '}
-          <Link to="/syarat-ketentuan" target="_blank" className="font-bold text-ink underline">Syarat &amp; Ketentuan</Link>{' '}
-          dan{' '}
-          <Link to="/kebijakan-refund" target="_blank" className="font-bold text-ink underline">Kebijakan Refund</Link>.
+          Tiket {harga}, dibayar dengan QRIS atau GoPay. Rincian pesanan ditampilkan dulu sebelum Anda membayar.
         </p>
       )}
 
@@ -223,7 +237,18 @@ export function PanelBayar({
         <p className="mading-alert text-sm">Pembayaran belum aktif: VITE_MIDTRANS_CLIENT_KEY belum diisi.</p>
       )}
 
-      {pesan && <p className="mading-alert text-sm" role="alert">{pesan}</p>}
+      {pesan && !konfirmasiTerbuka && <p className="mading-alert text-sm" role="alert">{pesan}</p>}
+
+      {konfirmasiTerbuka && bolehDaftar && (
+        <KonfirmasiBayar
+          event={event}
+          profil={profil}
+          memproses={memproses}
+          pesan={pesan}
+          onBatal={() => onKonfirmasiTerbuka(false)}
+          onBayar={bayar}
+        />
+      )}
     </div>
   );
 }
