@@ -6,6 +6,8 @@
 // Rahasia yang wajib diisi di Dashboard > Edge Functions > Secrets:
 //   MIDTRANS_SERVER_KEY   server key dari dasbor Midtrans (sandbox atau produksi)
 //   MIDTRANS_PRODUCTION   isi "true" hanya untuk transaksi sungguhan
+// Server key Production dan Sandbox berbeda; key yang tidak serasi dengan
+// MIDTRANS_PRODUCTION ditolak Midtrans dengan status 401.
 // SUPABASE_URL, SUPABASE_ANON_KEY, dan SUPABASE_SERVICE_ROLE_KEY sudah
 // tersedia otomatis di lingkungan Edge Function, tidak perlu diisi.
 //
@@ -38,6 +40,18 @@ function jawab(isi: unknown, status = 200): Response {
 
 function otorisasiMidtrans(serverKey: string): string {
   return 'Basic ' + btoa(`${serverKey}:`);
+}
+
+// Menebak jenis kunci yang terpasang di MIDTRANS_SERVER_KEY tanpa mencatat
+// isinya, supaya penolakan 401 dari Midtrans bisa dilacak dari log: kunci
+// yang tertukar dengan client key atau Signature Secret Key, atau key sandbox.
+function jenisKunci(kunci: string): string {
+  const signature = (Deno.env.get('MIDTRANS_SIGNATURE_KEY') ?? '').trim();
+  if (signature && kunci === signature) return 'sama dengan MIDTRANS_SIGNATURE_KEY';
+  if (/^(SB-)?Mid-client-/.test(kunci)) return 'client key';
+  if (/^SB-Mid-server-/.test(kunci)) return 'server key sandbox (SB-)';
+  if (/^Mid-server-/.test(kunci)) return 'server key (Mid-server-)';
+  return 'format tidak dikenal';
 }
 
 // Harus sama dengan statusDariMidtrans di src/lib/pembayaran.ts (yang punya test).
@@ -79,6 +93,14 @@ async function buat(server: SupabaseClient, userId: string, eventId: string, ser
   const hasil = await respons.json().catch(() => ({}));
 
   if (!respons.ok || !hasil.token) {
+    // Petunjuk untuk log tanpa membocorkan kuncinya.
+    console.warn('Midtrans menolak pembuatan transaksi', JSON.stringify({
+      status: respons.status,
+      produksi: PRODUKSI,
+      jenis_kunci: jenisKunci(serverKey),
+      panjang_kunci: serverKey.length,
+      jawaban: JSON.stringify(hasil).slice(0, 300),
+    }));
     // Lepas tahanan kursinya supaya tidak menggantung sampai batas bayar.
     await server.rpc('konfirmasi_pembayaran', {
       p_order_id: data.orderId,
@@ -202,7 +224,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return jawab({ error: 'Metode tidak didukung.' }, 405);
 
-  const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
+  // Spasi atau baris baru yang ikut tersalin saat mengisi secret membuat
+  // Midtrans menolak kuncinya (401), jadi dibuang lebih dulu.
+  const serverKey = (Deno.env.get('MIDTRANS_SERVER_KEY') ?? '').trim();
   if (!serverKey) {
     return jawab({ error: 'MIDTRANS_SERVER_KEY belum diisi di Supabase > Edge Functions > Secrets.' }, 500);
   }

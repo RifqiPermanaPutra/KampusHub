@@ -83,6 +83,20 @@ Event berbayar dibayar lewat Midtrans Snap. Langkah menyiapkannya dalam mode san
 
 Tanpa langkah 5, pembayaran tetap bisa dikonfirmasi lewat tombol **Cek Status Pembayaran**.
 
+### Pindah ke Production (uang sungguhan)
+
+Empat pengaturan harus serasi; satu saja masih sandbox membuat Midtrans menolak transaksi (401):
+
+| Tempat | Isi |
+|---|---|
+| Supabase → Edge Functions → Secrets | `MIDTRANS_SERVER_KEY` dan `MIDTRANS_SIGNATURE_KEY` dari dasbor **Production**, serta `MIDTRANS_PRODUCTION` = `true` (huruf kecil, tanpa tanda kutip) |
+| Variabel build hosting (Cloudflare) dan `.env.local` | `VITE_MIDTRANS_CLIENT_KEY` dari dasbor Production dan `VITE_MIDTRANS_PRODUCTION` = `true`, lalu build ulang |
+
+Server key yang dibuat lewat **Generate server key** cukup diberi izin Snap Checkout: Write, Core API: Read,
+dan Expire transaction: Write. Isi juga Notification URL dan Finish Redirect URL di dasbor Production,
+karena pengaturan Sandbox tidak ikut terbawa. Kalau pembayaran ditolak, log fungsi `pembayaran`
+mencatat mode yang terbaca dan jenis kunci yang terpasang, tanpa isi kuncinya.
+
 ## Halaman Publik
 
 Pengunjung yang belum masuk melihat halaman depan di `/`: event yang akan datang beserta harganya
