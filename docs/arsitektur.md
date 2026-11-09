@@ -63,8 +63,8 @@ flowchart LR
 Penjelasan:
 
 - **Penyajian aplikasi.** Pada mode pengembangan, `server.ts` menjalankan Vite sebagai
-  middleware. Pada mode produksi, `server.ts` menyajikan folder `dist`. Hosting statis seperti
-  Netlify juga bisa dipakai karena `public/_redirects` sudah tersedia.
+  middleware. Pada mode produksi, `server.ts` menyajikan folder `dist`. Versi online di-hosting
+  sebagai berkas statis di Cloudflare Workers; pengaturannya ada di `wrangler.jsonc`.
 - **Akses data.** Browser memakai anon key lewat supabase-js. Hak akses yang sebenarnya
   ditentukan Row Level Security di database, jadi mengubah kode di browser tidak membuka data
   milik orang lain.

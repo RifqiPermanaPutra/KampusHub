@@ -392,7 +392,7 @@ individual defense: bagian yang dikerjakan, cara kerjanya, dan hubungannya denga
 - Uji menyeluruh yang belum dilakukan: pendaftaran akun email dan Google baru, pengajuan
   panitia, email atur ulang kata sandi, pembayaran sandbox sampai e-tiket terbit, check-in
   dengan tiga cara, sertifikat sampai terverifikasi, dan pemasangan di HP
-- Deploy ke hosting ber-HTTPS (repository sudah memuat `public/_redirects` untuk Netlify)
+- Deploy ke hosting ber-HTTPS (Cloudflare Workers, lihat `wrangler.jsonc`)
 - Laporkan perubahan teknologi dari proposal (Firebase ke Supabase) dan penambahan scope kepada
   dosen
 - Hapus berkas sisa versi Firebase: `diagrams.md`, `diagrams11.md`, `security_spec.md`,
