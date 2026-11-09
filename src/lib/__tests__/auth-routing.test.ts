@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AuthState, decideAuthRoute } from '../auth-routing';
+import { AuthState, decideAuthRoute, wajahBeranda } from '../auth-routing';
 
 function state(extra: Partial<AuthState> = {}): AuthState {
   return {
@@ -46,5 +46,24 @@ describe('decideAuthRoute', () => {
 
   it('mengizinkan halaman tanpa batasan role', () => {
     expect(decideAuthRoute(state())).toEqual({ kind: 'allow' });
+  });
+});
+
+describe('wajahBeranda', () => {
+  it('menampilkan halaman depan publik untuk pengunjung yang belum masuk', () => {
+    expect(wajahBeranda({ pathname: '/', loading: false, hasUser: false })).toBe('publik');
+  });
+
+  it('menampilkan Beranda aplikasi untuk pengguna yang sudah masuk', () => {
+    expect(wajahBeranda({ pathname: '/', loading: false, hasUser: true })).toBe('aplikasi');
+  });
+
+  it('menunggu status login supaya tidak berkedip ke wajah yang salah', () => {
+    expect(wajahBeranda({ pathname: '/', loading: true, hasUser: false })).toBe('tunggu');
+  });
+
+  it('tidak mengubah alamat lain, yang tetap dijaga Guard', () => {
+    expect(wajahBeranda({ pathname: '/explore', loading: false, hasUser: false })).toBe('aplikasi');
+    expect(wajahBeranda({ pathname: '/my-rsvps', loading: true, hasUser: false })).toBe('aplikasi');
   });
 });

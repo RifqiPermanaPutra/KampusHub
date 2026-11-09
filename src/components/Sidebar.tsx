@@ -11,6 +11,7 @@ import { authService } from '../services/authService';
 import { Avatar } from './ui/Avatar';
 import { cn } from '../lib/utils';
 import { Logo } from './Logo';
+import { TAUTAN_KEBIJAKAN } from '../lib/info-situs';
 
 interface SidebarProps {
   open: boolean;
@@ -146,6 +147,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               Masuk ke akun
             </Link>
           )}
+          <nav aria-label="Informasi" className="mt-4 flex flex-wrap gap-x-3 gap-y-1">
+            {TAUTAN_KEBIJAKAN.map(t => (
+              <Link key={t.to} to={t.to} onClick={onClose} className="text-xs font-medium text-ink/60 hover:text-ink hover:underline">
+                {t.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </aside>
     </>

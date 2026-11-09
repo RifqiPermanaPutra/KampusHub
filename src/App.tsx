@@ -11,6 +11,7 @@ import { Layout } from './components/Layout';
 import { Guard } from './components/Guard';
 import { PageLoader } from './components/PageLoader';
 import { BatasGalat } from './components/BatasGalat';
+import { GerbangPublik } from './components/GerbangPublik';
 import { SetupNotice } from './components/SetupNotice';
 import { konfigurasiSupabaseAda } from './lib/supabase';
 
@@ -38,6 +39,10 @@ const SertifikatSaya = lazy(() => import('./pages/SertifikatSaya').then(m => ({ 
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate').then(m => ({ default: m.VerifyCertificate })));
 const LupaSandi = lazy(() => import('./pages/LupaSandi').then(m => ({ default: m.LupaSandi })));
 const AturSandi = lazy(() => import('./pages/AturSandi').then(m => ({ default: m.AturSandi })));
+const SyaratKetentuan = lazy(() => import('./pages/Informasi').then(m => ({ default: m.SyaratKetentuan })));
+const KebijakanRefund = lazy(() => import('./pages/Informasi').then(m => ({ default: m.KebijakanRefund })));
+const KebijakanPrivasi = lazy(() => import('./pages/Informasi').then(m => ({ default: m.KebijakanPrivasi })));
+const Kontak = lazy(() => import('./pages/Informasi').then(m => ({ default: m.Kontak })));
 
 export default function App() {
   // Tanpa kunci Supabase, setiap halaman hanya akan gagal memuat data. Lebih
@@ -60,9 +65,15 @@ export default function App() {
           <Route path="/atur-sandi" element={<AturSandi />} />
           {/* Tidak dibungkus Guard: tautannya tercetak di sertifikat dan dibuka pihak luar tanpa akun. */}
           <Route path="/verify/:code" element={<VerifyCertificate />} />
+          {/* Halaman kebijakan: dibuka tanpa login, termasuk oleh peninjau Midtrans. */}
+          <Route path="/syarat-ketentuan" element={<SyaratKetentuan />} />
+          <Route path="/kebijakan-refund" element={<KebijakanRefund />} />
+          <Route path="/kebijakan-privasi" element={<KebijakanPrivasi />} />
+          <Route path="/kontak" element={<Kontak />} />
           <Route path="/complete-profile" element={<Guard><CompleteProfile /></Guard>} />
 
-          {/* Protected Routes */}
+          {/* Protected Routes. Di "/", pengunjung yang belum masuk melihat halaman depan publik. */}
+          <Route element={<GerbangPublik />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Guard><Home /></Guard>} />
             <Route path="/explore" element={<Guard><ExploreEvents /></Guard>} />
@@ -94,6 +105,7 @@ export default function App() {
                 </Guard>
               }
             />
+          </Route>
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

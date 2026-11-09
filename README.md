@@ -42,7 +42,8 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
 2. Buka **SQL Editor**, lalu jalankan berkas di `supabase/migrations/` **berurutan**:
    `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql` → `07_prodi.sql` → `08_akses_dan_waktu_selesai.sql` →
    `09_peserta_umum.sql` → `10_kapasitas_daftar_tunggu.sql` → `11_pembayaran.sql` →
-   `12_batas_permintaan.sql` → `13_sertifikat.sql` → `14_tiket_dan_check_in.sql`.
+   `12_batas_permintaan.sql` → `13_sertifikat.sql` → `14_tiket_dan_check_in.sql` →
+   `15_batas_bayar_15_menit.sql` → `16_event_publik.sql`.
    Setelah itu, jalankan `supabase/tests/uji_akses.sql` untuk memastikan hak akses sudah
    benar. Hasil yang diharapkan: "Success. No rows returned".
 3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.
@@ -81,6 +82,14 @@ Event berbayar dibayar lewat Midtrans Snap. Langkah menyiapkannya dalam mode san
    `https://<id-proyek>.supabase.co/functions/v1/notifikasi-midtrans`.
 
 Tanpa langkah 5, pembayaran tetap bisa dikonfirmasi lewat tombol **Cek Status Pembayaran**.
+
+## Halaman Publik
+
+Pengunjung yang belum masuk melihat halaman depan di `/`: event yang akan datang beserta harganya
+(dari fungsi `event_publik`, migrasi 16), cara ikut event, dan tautan ke **Syarat & Ketentuan**,
+**Kebijakan Refund**, **Kebijakan Privasi**, serta **Kontak**. Halaman-halaman ini juga yang diperiksa
+Midtrans sebelum mengaktifkan pembayaran Production. Nama pengelola, email kontak, dan tenggat refund
+diatur di `src/lib/info-situs.ts`.
 
 ## Keamanan Akun (Supabase Auth)
 

@@ -24,6 +24,18 @@ export interface AuthState {
 }
 
 /**
+ * Alamat `/` punya dua wajah: halaman depan publik untuk pengunjung yang belum
+ * masuk, dan Beranda aplikasi untuk yang sudah masuk. Selama status login
+ * belum diketahui, tampilkan layar tunggu supaya tidak sempat berkedip ke
+ * wajah yang salah. Alamat lain tidak terpengaruh dan tetap dijaga Guard.
+ */
+export function wajahBeranda(state: { pathname: string; loading: boolean; hasUser: boolean }): 'publik' | 'tunggu' | 'aplikasi' {
+  if (state.pathname !== '/') return 'aplikasi';
+  if (state.loading) return 'tunggu';
+  return state.hasUser ? 'aplikasi' : 'publik';
+}
+
+/**
  * Menentukan apa yang harus dilakukan Guard. Dipisah dari komponen supaya
  * bisa diuji, terutama kasus profil gagal dimuat: dulu kasus ini disamakan
  * dengan "profil belum dibuat" sehingga pengguna lama dikirim ke halaman

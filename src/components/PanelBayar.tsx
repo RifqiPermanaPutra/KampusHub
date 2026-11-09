@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CreditCard } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Event, Pembayaran } from '../types';
@@ -211,7 +212,10 @@ export function PanelBayar({
           Harga sama untuk semua metode ({harga}): QRIS, GoPay, transfer bank, atau e-wallet lain. Setelah
           dipilih di jendela Midtrans, metode terkunci, tetapi bisa diganti lewat tombol Ganti Metode
           Pembayaran. Kursi ditahan {BATAS_BAYAR_MENIT} menit selama pembayaran, dan pendaftaran tidak bisa dibatalkan
-          setelah lunas.
+          setelah lunas. Dengan membayar, Anda menyetujui{' '}
+          <Link to="/syarat-ketentuan" target="_blank" className="font-bold text-ink underline">Syarat &amp; Ketentuan</Link>{' '}
+          dan{' '}
+          <Link to="/kebijakan-refund" target="_blank" className="font-bold text-ink underline">Kebijakan Refund</Link>.
         </p>
       )}
 

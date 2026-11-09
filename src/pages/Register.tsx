@@ -245,6 +245,13 @@ export function Register() {
             Buat Akun
           </Button>
 
+          <p className="text-xs text-center text-ink/70">
+            Dengan membuat akun, Anda menyetujui{' '}
+            <Link to="/syarat-ketentuan" target="_blank" className="font-bold text-ink underline">Syarat &amp; Ketentuan</Link>{' '}
+            dan{' '}
+            <Link to="/kebijakan-privasi" target="_blank" className="font-bold text-ink underline">Kebijakan Privasi</Link>.
+          </p>
+
           <p className="text-xs text-center text-ink/60">
             {jenis === 'uir'
               ? 'Ingin menyelenggarakan event? Setelah mendaftar, ajukan diri sebagai panitia dari halaman Profil.'

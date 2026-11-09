@@ -114,6 +114,17 @@
     pointer-events: none;
   }
 
+  /* Daftar berbutir di halaman kebijakan; preflight Tailwind menghapus butirnya. */
+  .info-teks ul,
+  .info-teks ol {
+    @apply space-y-1.5 pl-5;
+  }
+  .info-teks ul { list-style: disc; }
+  .info-teks ol { list-style: decimal; }
+  .info-teks a {
+    @apply font-semibold text-ink underline decoration-pulpen decoration-2 underline-offset-2;
+  }
+
   /* Kertas kotak-kotak */
   .paper-grid {
     background-color: var(--color-paper);

@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Logo } from './Logo';
 
 /** Kerangka halaman masuk/daftar: kertas kotak-kotak + kartu yang ditempel. */
@@ -21,7 +22,9 @@ export function AuthShell({
     <div className="min-h-dvh paper-grid flex items-center justify-center px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:py-12">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6 sm:mb-10">
-          <Logo className="text-3xl" />
+          <Link to="/" aria-label="KampusHub, ke halaman depan">
+            <Logo className="text-3xl" />
+          </Link>
         </div>
         <div className="tape mading-card shadow-sticker-lg p-5 pt-8 space-y-6 sm:p-10 sm:space-y-8">
           <div className="text-center">

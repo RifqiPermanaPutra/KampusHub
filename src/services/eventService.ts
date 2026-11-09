@@ -38,6 +38,30 @@ export const eventService = {
     }
   },
 
+  /**
+   * Event yang akan datang untuk halaman depan publik, bisa dibaca tanpa login.
+   * Lewat fungsi event_publik (migrasi 16) karena pengunjung anon tidak boleh
+   * membaca tabel events; kolom yang tidak dikembalikan diisi nilai kosong.
+   */
+  async getEventPublik(): Promise<Event[]> {
+    try {
+      const { data, error } = await supabase.rpc('event_publik');
+      if (error) throw error;
+      return (data as Omit<EventRow, 'description' | 'status' | 'organizer_id' | 'alasan_penolakan' | 'created_at'>[])
+        .map(row => rowToEvent({
+          ...row,
+          description: '',
+          status: 'approved',
+          organizer_id: '',
+          alasan_penolakan: null,
+          created_at: row.date,
+        }));
+    } catch (error) {
+      logDbError(error, OperationType.LIST, 'event_publik');
+      return [];
+    }
+  },
+
   async getEventById(id: string): Promise<Event | null> {
     try {
       const { data, error } = await supabase
