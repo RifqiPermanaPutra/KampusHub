@@ -43,7 +43,7 @@ KampusHub adalah aplikasi web terintegrasi untuk manajemen kegiatan (event) di l
    `01_schema.sql` → `02_views.sql` → `03_functions.sql` → `04_rls.sql` → `06_fitur_lanjutan.sql` → `07_prodi.sql` → `08_akses_dan_waktu_selesai.sql` →
    `09_peserta_umum.sql` → `10_kapasitas_daftar_tunggu.sql` → `11_pembayaran.sql` →
    `12_batas_permintaan.sql` → `13_sertifikat.sql` → `14_tiket_dan_check_in.sql` →
-   `15_batas_bayar_15_menit.sql` → `16_event_publik.sql`.
+   `15_batas_bayar_15_menit.sql` → `16_event_publik.sql` → `17_lindungi_pembayaran.sql`.
    Setelah itu, jalankan `supabase/tests/uji_akses.sql` untuk memastikan hak akses sudah
    benar. Hasil yang diharapkan: "Success. No rows returned".
 3. Salin **Project URL** dan **anon key** dari **Project Settings → API** ke `.env.local`.

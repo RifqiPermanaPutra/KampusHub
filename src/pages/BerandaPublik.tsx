@@ -24,7 +24,7 @@ const LANGKAH = [
   {
     ikon: CreditCard,
     judul: 'Pilih event dan bayar',
-    isi: 'Event gratis langsung terdaftar. Event berbayar dibayar lewat Midtrans dengan QRIS, e-wallet, atau transfer bank.',
+    isi: 'Event gratis langsung terdaftar. Event berbayar dibayar lewat Midtrans dengan QRIS dari e-wallet atau m-banking apa pun, atau GoPay.',
   },
   {
     ikon: QrCode,

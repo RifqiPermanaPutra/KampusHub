@@ -209,7 +209,7 @@ export function PanelBayar({
 
       {!menunggu && !ditutup && !habis && midtransSiap && (
         <p className="text-xs text-ink/70 text-center">
-          Harga sama untuk semua metode ({harga}): QRIS, GoPay, transfer bank, atau e-wallet lain. Setelah
+          Harga sama untuk semua metode ({harga}): QRIS (bisa dari e-wallet atau m-banking apa pun) atau GoPay. Setelah
           dipilih di jendela Midtrans, metode terkunci, tetapi bisa diganti lewat tombol Ganti Metode
           Pembayaran. Kursi ditahan {BATAS_BAYAR_MENIT} menit selama pembayaran, dan pendaftaran tidak bisa dibatalkan
           setelah lunas. Dengan membayar, Anda menyetujui{' '}

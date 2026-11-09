@@ -369,8 +369,8 @@ export function CreateEvent() {
                 onChange={(e) => setFormData({ ...formData, harga: e.target.value })}
               />
               <p className="text-xs text-ink/60">
-                Kosongkan untuk event gratis. Event berbayar dibayar lewat Midtrans (QRIS, transfer bank,
-                e-wallet), tidak punya daftar tunggu, dan tidak bisa dibatalkan peserta setelah lunas.
+                Kosongkan untuk event gratis. Event berbayar dibayar lewat Midtrans (QRIS atau
+                GoPay), tidak punya daftar tunggu, dan tidak bisa dibatalkan peserta setelah lunas.
                 Harga tidak bisa diubah lagi setelah ada yang membayar.
               </p>
               {galatHarga && <p className="mading-alert">{galatHarga}</p>}

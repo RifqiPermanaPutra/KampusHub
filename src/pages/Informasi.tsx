@@ -68,8 +68,8 @@ export function SyaratKetentuan() {
           <li>Harga tiket tertera dalam Rupiah per orang dan sudah termasuk biaya pembayaran. Harga sama untuk semua metode pembayaran.</li>
           <li>
             Pembayaran diproses oleh Midtrans, penyedia layanan pembayaran berlisensi Bank Indonesia, dengan
-            metode seperti QRIS, e-wallet, dan transfer bank (virtual account) sesuai yang tersedia saat
-            pembayaran.
+            metode QRIS (dapat dibayar dari e-wallet atau aplikasi m-banking apa pun) dan
+            GoPay.
           </li>
           <li>
             Kursi ditahan selama {BATAS_BAYAR_MENIT} menit sejak pembayaran dimulai. Jika pembayaran tidak

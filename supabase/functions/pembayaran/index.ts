@@ -24,6 +24,13 @@ const STATUS_URL = PRODUKSI ? 'https://api.midtrans.com/v2' : 'https://api.sandb
 // Harus sama dengan interval di siapkan_pembayaran (migrasi 15) dan
 // BATAS_BAYAR_MENIT di src/lib/pembayaran.ts.
 const BATAS_BAYAR_MENIT = 15;
+// Hanya metode dengan biaya persentase kecil. Virtual account dan gerai
+// dikenai biaya tetap sekitar Rp4.000 per transaksi, lebih mahal dari tiket
+// murah yang harganya mulai Rp1.000. QRIS tetap bisa dibayar dari e-wallet
+// atau m-banking apa pun, termasuk ShopeePay, OVO, dan DANA. Teks di
+// PanelBayar, BerandaPublik, CreateEvent, dan Syarat & Ketentuan menyebut
+// metode yang sama.
+const METODE_DIIZINKAN = ['other_qris', 'gopay'];
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -88,6 +95,7 @@ async function buat(server: SupabaseClient, userId: string, eventId: string, ser
       ],
       customer_details: { first_name: String(data.nama).slice(0, 255), email: data.email },
       expiry: { unit: 'minutes', duration: BATAS_BAYAR_MENIT },
+      enabled_payments: METODE_DIIZINKAN,
     }),
   });
   const hasil = await respons.json().catch(() => ({}));
