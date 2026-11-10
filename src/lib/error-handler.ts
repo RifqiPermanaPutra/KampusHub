@@ -3,6 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { BATAS_DESKRIPSI, BATAS_JUDUL } from './batas-event';
+
+/*
+ * Pesan untuk check constraint yang bisa dilanggar dari form. Galat 23514 dari
+ * Postgres menyebut nama constraint-nya, jadi pengguna bisa diberi tahu kolom
+ * mana yang salah, bukan sekadar "data tidak memenuhi syarat".
+ */
+const PESAN_ATURAN: Record<string, string> = {
+  events_description_check: `Deskripsi terlalu panjang: maksimal ${BATAS_DESKRIPSI.toLocaleString('id-ID')} karakter.`,
+  events_title_check: `Judul wajib diisi, maksimal ${BATAS_JUDUL} karakter.`,
+  events_harga_check: 'Harga minimal Rp 1.000, atau kosongkan untuk event gratis.',
+  events_capacity_check: 'Kuota harus lebih dari 0, atau kosongkan kalau tanpa batas.',
+  events_end_date_check: 'Waktu selesai harus setelah waktu mulai.',
+};
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -39,8 +54,10 @@ export function pesanDbError(error: unknown): string {
       return 'Data ini sudah ada sebelumnya.';
     case '23503':
       return 'Data yang dirujuk tidak ditemukan atau sudah dihapus.';
-    case '23514':
-      return 'Data tidak memenuhi syarat yang ditetapkan.';
+    case '23514': {
+      const aturan = Object.keys(PESAN_ATURAN).find(nama => pesan.includes(nama));
+      return aturan ? PESAN_ATURAN[aturan] : 'Data tidak memenuhi syarat yang ditetapkan.';
+    }
     case '42501':
       return 'Anda tidak punya izin untuk melakukan tindakan ini.';
     case 'PGRST116':

@@ -22,6 +22,7 @@ import { EventCard } from '../components/EventCard';
 import { CATEGORIES } from '../constants';
 import { Event, EventStatus } from '../types';
 import { cn } from '../lib/utils';
+import { BATAS_DESKRIPSI, BATAS_JUDUL, galatDeskripsi, jumlahKarakter } from '../lib/batas-event';
 
 const fieldLabel = 'block text-xs font-bold text-ink uppercase tracking-wider';
 // text-base di ponsel: Safari memperbesar layar kalau huruf kolom di bawah 16px.
@@ -96,12 +97,20 @@ export function CreateEvent() {
     fetchEvent();
   }, [id]);
 
+  const jumlahDeskripsi = jumlahKarakter(formData.description);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
 
     if (new Date(formData.endDate) <= new Date(formData.date)) {
       setError('Waktu selesai harus setelah waktu mulai.');
+      return;
+    }
+
+    const galatPanjang = galatDeskripsi(formData.description);
+    if (galatPanjang) {
+      setError(galatPanjang);
       return;
     }
 
@@ -272,6 +281,7 @@ export function CreateEvent() {
               placeholder="Contoh: Seminar Nasional AI 2026"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              maxLength={BATAS_JUDUL}
               required
               className="text-lg font-bold sm:text-lg"
             />
@@ -300,7 +310,21 @@ export function CreateEvent() {
                 className={cn(fieldBox, 'min-h-[150px] py-3')}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                aria-describedby="event-description-hitungan"
+                aria-invalid={jumlahDeskripsi > BATAS_DESKRIPSI || undefined}
               />
+              {/* Batasnya sama dengan aturan database (migrasi 18), jadi ketahuan sebelum dikirim. */}
+              <p
+                id="event-description-hitungan"
+                className={cn(
+                  'text-right text-xs tabular-nums',
+                  jumlahDeskripsi > BATAS_DESKRIPSI ? 'font-bold text-spidol' : 'text-ink/60'
+                )}
+              >
+                {jumlahDeskripsi.toLocaleString('id-ID')} / {BATAS_DESKRIPSI.toLocaleString('id-ID')} karakter
+                {jumlahDeskripsi > BATAS_DESKRIPSI &&
+                  ` · lebih ${(jumlahDeskripsi - BATAS_DESKRIPSI).toLocaleString('id-ID')}`}
+              </p>
             </div>
 
             <div className="space-y-1.5">
